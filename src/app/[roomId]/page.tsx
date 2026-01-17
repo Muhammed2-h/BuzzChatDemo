@@ -34,6 +34,7 @@ export default function RoomPage() {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
 
   const scrollToBottom = () => {
@@ -141,9 +142,18 @@ export default function RoomPage() {
 
             const data = await res.json();
             if (data.success) {
-                if (data.messages.length > 0) {
-                    setMessages(prev => [...prev, ...data.messages].sort((a, b) => a.timestamp - b.timestamp));
-                    lastMessageTimestamp.current = data.messages[data.messages.length - 1].timestamp;
+                const receivedMessages: Message[] = data.messages;
+                if (receivedMessages.length > 0) {
+                    // Play sound if there's a new message from another user
+                    const hasNewMessageFromOthers = receivedMessages.some(msg => msg.user !== username && msg.user !== 'System');
+                    if (hasNewMessageFromOthers) {
+                        audioRef.current?.play().catch(error => {
+                            console.log("Audio play was prevented. User interaction might be required.", error);
+                        });
+                    }
+                    
+                    setMessages(prev => [...prev, ...receivedMessages].sort((a, b) => a.timestamp - b.timestamp));
+                    lastMessageTimestamp.current = receivedMessages[receivedMessages.length - 1].timestamp;
                 }
                 if (data.users) {
                     setOnlineUsers(data.users);
@@ -283,6 +293,7 @@ export default function RoomPage() {
           </Button>
         </form>
       </footer>
+      <audio ref={audioRef} src="https://freesound.org/data/previews/341/341988_2803399-lq.mp3" preload="auto" />
     </div>
   );
 }
