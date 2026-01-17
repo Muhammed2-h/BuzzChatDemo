@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Bell, BellOff } from 'lucide-react';
 import type { Message } from '@/lib/rooms';
 
 export default function RoomPage() {
@@ -32,13 +33,33 @@ export default function RoomPage() {
   const [currentMessage, setCurrentMessage] = useState('');
   const [error, setError] = useState('');
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const playNotificationSound = () => {
+    if (!isSoundEnabled) return;
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (!audioContext) return;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (e) {
+      console.error("Could not play sound", e);
+    }
   };
 
   useEffect(() => {
@@ -147,9 +168,7 @@ export default function RoomPage() {
                     // Play sound if there's a new message from another user
                     const hasNewMessageFromOthers = receivedMessages.some(msg => msg.user !== username && msg.user !== 'System');
                     if (hasNewMessageFromOthers) {
-                        audioRef.current?.play().catch(error => {
-                            console.log("Audio play was prevented. User interaction might be required.", error);
-                        });
+                        playNotificationSound();
                     }
                     
                     setMessages(prev => [...prev, ...receivedMessages].sort((a, b) => a.timestamp - b.timestamp));
@@ -232,6 +251,10 @@ export default function RoomPage() {
           <p className="text-xs text-muted-foreground mt-2 font-mono bg-muted p-1 rounded-md inline-block">Passkey: {passkey}</p>
         </div>
         <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="h-9 w-9">
+                {isSoundEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+                <span className="sr-only">Toggle sound</span>
+            </Button>
           <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">Clear Chat</Button>
@@ -293,7 +316,6 @@ export default function RoomPage() {
           </Button>
         </form>
       </footer>
-      <audio ref={audioRef} src="https://freesound.org/data/previews/341/341988_2803399-lq.mp3" preload="auto" />
     </div>
   );
 }
