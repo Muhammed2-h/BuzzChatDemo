@@ -196,6 +196,7 @@ export default function RoomPage() {
             onChange={(e) => setCurrentMessage(e.target.value)}
             disabled={!isAuthenticated}
             autoComplete="off"
+            maxLength={1000}
           />
           <Button type="submit" disabled={!isAuthenticated || !currentMessage.trim()}>
             Send

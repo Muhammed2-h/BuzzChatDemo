@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Missing required fields: roomId, passkey, user, and text.' }, { status: 400 });
     }
     
-    if (text.length > 500) {
+    if (text.length > 1000) {
         return NextResponse.json({ success: false, error: 'Message is too long.' }, { status: 400 });
     }
 
