@@ -31,6 +31,7 @@ export default function RoomPage() {
   const [passkey, setPasskey] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
@@ -98,8 +99,9 @@ export default function RoomPage() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentMessage.trim()) return;
+    if (!currentMessage.trim() || isSending) return;
 
+    setIsSending(true);
     try {
       await fetch('/api/send', {
         method: 'POST',
@@ -109,6 +111,8 @@ export default function RoomPage() {
       setCurrentMessage('');
     } catch (err) {
       console.error('Failed to send message:', err);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -165,14 +169,19 @@ export default function RoomPage() {
             if (data.success) {
                 const receivedMessages: Message[] = data.messages;
                 if (receivedMessages.length > 0) {
-                    // Play sound if there's a new message from another user
                     const hasNewMessageFromOthers = receivedMessages.some(msg => msg.user !== username && msg.user !== 'System');
                     if (hasNewMessageFromOthers) {
                         playNotificationSound();
                     }
                     
-                    setMessages(prev => [...prev, ...receivedMessages].sort((a, b) => a.timestamp - b.timestamp));
-                    lastMessageTimestamp.current = receivedMessages[receivedMessages.length - 1].timestamp;
+                    setMessages(prev => {
+                        const combined = [...prev, ...receivedMessages];
+                        const uniqueMessages = Array.from(new Map(combined.map(m => [m.timestamp, m])).values());
+                        return uniqueMessages.sort((a, b) => a.timestamp - b.timestamp);
+                    });
+                    
+                    const sortedReceived = [...receivedMessages].sort((a, b) => a.timestamp - b.timestamp);
+                    lastMessageTimestamp.current = sortedReceived[sortedReceived.length - 1].timestamp;
                 }
                 if (data.users) {
                     setOnlineUsers(data.users);
@@ -307,12 +316,12 @@ export default function RoomPage() {
             placeholder="Type a message..."
             value={currentMessage}
             onChange={(e) => setCurrentMessage(e.target.value)}
-            disabled={!isAuthenticated}
+            disabled={!isAuthenticated || isSending}
             autoComplete="off"
             maxLength={1000}
           />
-          <Button type="submit" disabled={!isAuthenticated || !currentMessage.trim()}>
-            Send
+          <Button type="submit" disabled={!isAuthenticated || !currentMessage.trim() || isSending}>
+            {isSending ? 'Sending...' : 'Send'}
           </Button>
         </form>
       </footer>
