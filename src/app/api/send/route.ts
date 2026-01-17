@@ -13,8 +13,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: 'Message is too long.' }, { status: 400 });
     }
 
-    if (!rooms[roomId] || rooms[roomId].passkey !== passkey) {
+    const room = rooms[roomId];
+
+    if (!room || room.passkey !== passkey) {
       return NextResponse.json({ success: false, error: 'Authentication failed. Invalid room or passkey.' }, { status: 403 });
+    }
+
+    // Update user's lastSeen timestamp
+    const sendingUser = room.users.find(u => u.username === user);
+    if (sendingUser) {
+        sendingUser.lastSeen = Date.now();
     }
 
     const message: Message = {
@@ -23,11 +31,11 @@ export async function POST(request: Request) {
       timestamp: Date.now(),
     };
 
-    rooms[roomId].messages.push(message);
+    room.messages.push(message);
 
     // To prevent memory leaks on a long-running server, cap messages per room.
-    if (rooms[roomId].messages.length > 100) {
-      rooms[roomId].messages = rooms[roomId].messages.slice(-100);
+    if (room.messages.length > 100) {
+      room.messages = room.messages.slice(-100);
     }
 
     return NextResponse.json({ success: true, message });

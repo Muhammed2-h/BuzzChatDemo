@@ -31,6 +31,7 @@ export default function RoomPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [error, setError] = useState('');
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
@@ -56,7 +57,7 @@ export default function RoomPage() {
       const res = await fetch('/api/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, passkey }),
+        body: JSON.stringify({ roomId, passkey, username }),
       });
 
       const data = await res.json();
@@ -64,7 +65,7 @@ export default function RoomPage() {
       if (res.ok && data.success) {
         setIsAuthenticated(true);
       } else {
-        setError(data.error || 'Invalid passkey.');
+        setError(data.error || 'Failed to join room.');
         setTimeout(() => setError(''), 3000);
       }
     } catch (err) {
@@ -89,8 +90,18 @@ export default function RoomPage() {
     }
   };
 
-  const handleDisconnect = () => {
-    router.push('/');
+  const handleDisconnect = async () => {
+    try {
+      await fetch('/api/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, passkey, username }),
+      });
+    } catch (err) {
+        console.error('Failed to notify server of disconnection:', err);
+    } finally {
+        router.push('/');
+    }
   };
 
   const handleClearChat = async () => {
@@ -115,16 +126,21 @@ export default function RoomPage() {
 
     const pollMessages = async () => {
       try {
-        const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}`);
+        const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}`);
         if (!res.ok) {
             setIsAuthenticated(false);
             setError('Session expired or passkey became invalid. Please re-join.');
             return;
         }
         const data = await res.json();
-        if (data.success && data.messages.length > 0) {
-          setMessages(prev => [...prev, ...data.messages].sort((a, b) => a.timestamp - b.timestamp));
-          lastMessageTimestamp.current = data.messages[data.messages.length - 1].timestamp;
+        if (data.success) {
+          if (data.messages.length > 0) {
+            setMessages(prev => [...prev, ...data.messages].sort((a, b) => a.timestamp - b.timestamp));
+            lastMessageTimestamp.current = data.messages[data.messages.length - 1].timestamp;
+          }
+          if (data.users) {
+            setOnlineUsers(data.users);
+          }
         }
       } catch (err) {
         console.error('Polling error:', err);
@@ -135,7 +151,7 @@ export default function RoomPage() {
     pollMessages();
 
     return () => clearInterval(intervalId);
-  }, [isAuthenticated, roomId, passkey]);
+  }, [isAuthenticated, roomId, passkey, username]);
 
   if (!isAuthenticated) {
     return (
@@ -187,6 +203,7 @@ export default function RoomPage() {
         <div>
           <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
           <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
+          <p className="text-sm text-muted-foreground mt-1">Online: {onlineUsers.join(', ')}</p>
           <p className="text-xs text-muted-foreground mt-2 font-mono bg-muted p-1 rounded-md inline-block">Passkey: {passkey}</p>
         </div>
         <div className="flex items-center gap-2">
