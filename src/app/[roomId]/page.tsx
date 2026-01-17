@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import type { Message } from '@/lib/rooms';
 
 export default function RoomPage() {
   const params = useParams();
+  const router = useRouter();
   const roomId = Array.isArray(params.roomId) ? params.roomId[0] : params.roomId;
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -75,6 +76,10 @@ export default function RoomPage() {
     } catch (err) {
       console.error('Failed to send message:', err);
     }
+  };
+
+  const handleDisconnect = () => {
+    router.push('/');
   };
 
   useEffect(() => {
@@ -150,9 +155,12 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="p-4 border-b shrink-0">
-        <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
-        <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
+      <header className="p-4 border-b shrink-0 flex justify-between items-center">
+        <div>
+          <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
+          <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
+        </div>
+        <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
       </header>
 
       <main className="flex-1 p-4 overflow-y-auto">
