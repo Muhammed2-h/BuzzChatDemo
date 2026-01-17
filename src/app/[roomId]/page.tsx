@@ -1,0 +1,199 @@
+"use client";
+
+import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import type { Message } from '@/lib/rooms';
+
+export default function RoomPage() {
+  const params = useParams();
+  const roomId = Array.isArray(params.roomId) ? params.roomId[0] : params.roomId;
+
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [username, setUsername] = useState('');
+  const [passkey, setPasskey] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastMessageTimestamp = useRef<number>(0);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleJoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!username.trim() || !passkey.trim()) {
+      setError('Username and passkey are required.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, passkey }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setIsAuthenticated(true);
+      } else {
+        setError(data.error || 'Invalid passkey.');
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentMessage.trim()) return;
+
+    try {
+      await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, passkey, user: username, text: currentMessage }),
+      });
+      setCurrentMessage('');
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const pollMessages = async () => {
+      try {
+        const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}`);
+        if (!res.ok) {
+            setIsAuthenticated(false);
+            setError('Session expired or passkey became invalid. Please re-join.');
+            return;
+        }
+        const data = await res.json();
+        if (data.success && data.messages.length > 0) {
+          setMessages(prev => [...prev, ...data.messages].sort((a, b) => a.timestamp - b.timestamp));
+          lastMessageTimestamp.current = data.messages[data.messages.length - 1].timestamp;
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    };
+
+    const intervalId = setInterval(pollMessages, 2000);
+    pollMessages();
+
+    return () => clearInterval(intervalId);
+  }, [isAuthenticated, roomId, passkey]);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Card className="w-full max-w-md mx-4">
+          <CardHeader>
+            <CardTitle className="font-headline">Join Room: {roomId}</CardTitle>
+            <CardDescription>
+              Enter a username and the room's passkey. If the room is new, your passkey will set it.
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleJoin}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  placeholder="Your name"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="passkey">Passkey</Label>
+                <Input
+                  id="passkey"
+                  type="password"
+                  placeholder="Room's secret passkey"
+                  value={passkey}
+                  onChange={(e) => setPasskey(e.target.value)}
+                  required
+                />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full">Join Chat</Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-screen bg-background text-foreground">
+      <header className="p-4 border-b shrink-0">
+        <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
+        <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
+      </header>
+
+      <main className="flex-1 p-4 overflow-y-auto">
+        <div className="space-y-6">
+          {messages.map((msg, index) => (
+            <div key={index} className="flex items-start gap-4">
+              <Avatar className="w-10 h-10 border">
+                <AvatarFallback className="bg-secondary text-secondary-foreground">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-semibold">{msg.user}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(msg.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+                <p className="text-sm leading-relaxed">{msg.text}</p>
+              </div>
+            </div>
+          ))}
+          {messages.length === 0 && (
+             <div className="text-center text-muted-foreground py-10">No messages yet. Say hello!</div>
+          )}
+        </div>
+        <div ref={messagesEndRef} />
+      </main>
+
+      <footer className="p-4 border-t shrink-0 bg-background">
+        <form onSubmit={handleSend} className="flex gap-2">
+          <Input
+            placeholder="Type a message..."
+            value={currentMessage}
+            onChange={(e) => setCurrentMessage(e.target.value)}
+            disabled={!isAuthenticated}
+            autoComplete="off"
+          />
+          <Button type="submit" disabled={!isAuthenticated || !currentMessage.trim()}>
+            Send
+          </Button>
+        </form>
+      </footer>
+    </div>
+  );
+}
