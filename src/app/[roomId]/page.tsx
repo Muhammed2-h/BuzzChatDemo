@@ -2,11 +2,22 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { Message } from '@/lib/rooms';
 
 export default function RoomPage() {
@@ -82,6 +93,23 @@ export default function RoomPage() {
     router.push('/');
   };
 
+  const handleClearChat = async () => {
+    try {
+      const res = await fetch('/api/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, passkey }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMessages([data.message]);
+        lastMessageTimestamp.current = data.message.timestamp;
+      }
+    } catch (err) {
+      console.error('Failed to clear chat:', err);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -155,12 +183,32 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="p-4 border-b shrink-0 flex justify-between items-center">
+      <header className="p-4 border-b shrink-0 flex justify-between items-start">
         <div>
           <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
           <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
+          <p className="text-xs text-muted-foreground mt-2 font-mono bg-muted p-1 rounded-md inline-block">Passkey: {passkey}</p>
         </div>
-        <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
+        <div className="flex items-center gap-2">
+          <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">Clear Chat</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action will permanently clear the chat history for this room. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearChat} className={buttonVariants({ variant: "destructive" })}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
+        </div>
       </header>
 
       <main className="flex-1 p-4 overflow-y-auto">
