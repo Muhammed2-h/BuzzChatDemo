@@ -124,34 +124,49 @@ export default function RoomPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
+    let isActive = true;
+    let timeoutId: NodeJS.Timeout;
+
     const pollMessages = async () => {
-      try {
-        const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}`);
-        if (!res.ok) {
-            setIsAuthenticated(false);
-            setError('Session expired or passkey became invalid. Please re-join.');
-            return;
+        try {
+            const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}`);
+            
+            if (!isActive) return;
+
+            if (!res.ok) {
+                setIsAuthenticated(false);
+                setError('Session expired or passkey became invalid. Please re-join.');
+                return; // Stop polling
+            }
+
+            const data = await res.json();
+            if (data.success) {
+                if (data.messages.length > 0) {
+                    setMessages(prev => [...prev, ...data.messages].sort((a, b) => a.timestamp - b.timestamp));
+                    lastMessageTimestamp.current = data.messages[data.messages.length - 1].timestamp;
+                }
+                if (data.users) {
+                    setOnlineUsers(data.users);
+                }
+            }
+        } catch (error) {
+            if (isActive) {
+                console.error('Polling error:', error);
+            }
+        } finally {
+            if (isActive) {
+                timeoutId = setTimeout(pollMessages, 2000);
+            }
         }
-        const data = await res.json();
-        if (data.success) {
-          if (data.messages.length > 0) {
-            setMessages(prev => [...prev, ...data.messages].sort((a, b) => a.timestamp - b.timestamp));
-            lastMessageTimestamp.current = data.messages[data.messages.length - 1].timestamp;
-          }
-          if (data.users) {
-            setOnlineUsers(data.users);
-          }
-        }
-      } catch (err) {
-        console.error('Polling error:', err);
-      }
     };
 
-    const intervalId = setInterval(pollMessages, 2000);
     pollMessages();
 
-    return () => clearInterval(intervalId);
-  }, [isAuthenticated, roomId, passkey, username]);
+    return () => {
+        isActive = false;
+        clearTimeout(timeoutId);
+    };
+}, [isAuthenticated, roomId, passkey, username]);
 
   if (!isAuthenticated) {
     return (
