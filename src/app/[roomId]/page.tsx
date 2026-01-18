@@ -339,7 +339,7 @@ export default function RoomPage() {
       {pinnedMessage && (
         <div className="flex items-center justify-between bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2 text-sm">
           <div className="flex items-center gap-2 overflow-hidden">
-            <Pin className="h-4 w-4 text-yellow-600 shrink-0 fill-yellow-600" />
+            <Pin className="h-4 w-4 text-green-600 shrink-0 fill-green-600" />
             <div className="flex flex-col truncate">
               <span className="font-bold text-yellow-700 text-xs">
                 Pinned by {pinnedBy.length > 0 ? pinnedBy.join(', ') : '...'}
@@ -378,6 +378,9 @@ export default function RoomPage() {
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
                         {new Date(msg.timestamp).toLocaleTimeString()}
                       </span>
+                      {pinnedMessage && pinnedMessage.timestamp === msg.timestamp && (
+                        <Pin className="h-3 w-3 fill-green-500 text-green-500 ml-1" />
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -394,7 +397,7 @@ export default function RoomPage() {
                         onClick={() => handlePin(msg)}
                         title="Pin Message"
                       >
-                        <Pin className="h-3 w-3" />
+                        <Pin className={`h-3 w-3 ${pinnedMessage?.timestamp === msg.timestamp ? 'fill-green-500 text-green-500' : ''}`} />
                       </Button>
                     </div>
                     {(msg as any).replyTo && (
