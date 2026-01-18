@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Bell, BellOff, Users, X, Reply, Pin, Trash2 } from 'lucide-react';
+import { Bell, BellOff, Users, X, Reply, Pin, Trash2, ArrowLeft } from 'lucide-react';
 import type { Message } from '@/lib/rooms';
 
 export default function RoomPage() {
@@ -289,7 +289,18 @@ export default function RoomPage() {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="w-full max-w-md mx-4">
           <CardHeader>
-            <CardTitle className="font-headline">Join Room: {roomId}</CardTitle>
+            <CardTitle className="font-headline flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => router.push('/')}
+                type="button"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              Join Room: {roomId}
+            </CardTitle>
             <CardDescription>
               Enter a username and the room's passkey. If the room is new, your passkey will set it.
             </CardDescription>
