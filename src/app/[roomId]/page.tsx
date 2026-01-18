@@ -55,7 +55,7 @@ export default function RoomPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const playNotificationSound = () => {
+  const playNotificationSound = (frequency: number = 440) => {
     if (!isSoundEnabled) return;
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -65,7 +65,7 @@ export default function RoomPage() {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
+      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
       gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.3);
       oscillator.start(audioContext.currentTime);
@@ -237,6 +237,46 @@ export default function RoomPage() {
     }
   };
 
+  const handleMessageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCurrentMessage(value);
+
+    // Detect @ mentions
+    const lastAtIndex = value.lastIndexOf('@');
+    if (lastAtIndex !== -1 && lastAtIndex === value.length - 1) {
+      setShowMentionDropdown(true);
+      setMentionFilter('');
+    } else if (lastAtIndex !== -1) {
+      const afterAt = value.substring(lastAtIndex + 1);
+      if (!afterAt.includes(' ')) {
+        setShowMentionDropdown(true);
+        setMentionFilter(afterAt);
+      } else {
+        setShowMentionDropdown(false);
+      }
+    } else {
+      setShowMentionDropdown(false);
+    }
+  };
+
+  const handleMentionSelect = (user: string) => {
+    const lastAtIndex = currentMessage.lastIndexOf('@');
+    const beforeAt = currentMessage.substring(0, lastAtIndex);
+    setCurrentMessage(beforeAt + '@' + user + ' ');
+    setShowMentionDropdown(false);
+  };
+
+  const handleEditMessage = (msg: Message) => {
+    setEditingMessage(msg);
+    setCurrentMessage(msg.text);
+    setReplyTo(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setCurrentMessage('');
+  };
+
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -262,7 +302,12 @@ export default function RoomPage() {
           const receivedMessages: Message[] = data.messages;
           if (receivedMessages.length > 0) {
             const hasNewMessageFromOthers = receivedMessages.some(msg => msg.user !== username && msg.user !== 'System');
-            if (hasNewMessageFromOthers) {
+            const hasMention = receivedMessages.some(msg => msg.mentions?.includes(username));
+
+            if (hasMention) {
+              // Play distinct sound for mentions (higher pitch)
+              playNotificationSound(880); // A5 note
+            } else if (hasNewMessageFromOthers) {
               playNotificationSound();
             }
 
@@ -456,16 +501,46 @@ export default function RoomPage() {
                 );
               }
 
+              // Announcement messages
+              if (msg.isAnnouncement) {
+                return (
+                  <div key={index} id={msg.id} className="my-4">
+                    <div className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-l-4 border-yellow-500 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Megaphone className="h-5 w-5 text-yellow-600" />
+                        <span className="font-bold text-yellow-700">Announcement from {msg.user}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                      </div>
+                      <p className="text-sm font-medium">{msg.text}</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Highlight mentions
+              const renderTextWithMentions = (text: string) => {
+                const parts = text.split(/(@\w+)/g);
+                return parts.map((part, i) => {
+                  if (part.startsWith('@') && part.substring(1) === username) {
+                    return <span key={i} className="bg-yellow-200 dark:bg-yellow-900/50 px-1 rounded font-semibold">{part}</span>;
+                  } else if (part.startsWith('@')) {
+                    return <span key={i} className="text-primary font-semibold">{part}</span>;
+                  }
+                  return part;
+                });
+              };
+
               return (
                 <div key={index} id={msg.id} className="flex items-start gap-2 sm:gap-4 group">
                   <Avatar className="w-8 h-8 sm:w-10 sm:h-10 border shrink-0">
                     <AvatarFallback className="bg-secondary text-secondary-foreground text-xs sm:text-sm">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
+                    <div className="flex items-baseline gap-2 flex-wrap">
                       <span className="font-semibold truncate">{msg.user}</span>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
                         {new Date(msg.timestamp).toLocaleTimeString()}
+                        {msg.editedAt && <span className="ml-1 text-[10px]">(edited)</span>}
                       </span>
                       {pinnedMessage && pinnedMessage.timestamp === msg.timestamp && (
                         <Pin className="h-3 w-3 fill-green-500 text-green-500 ml-1" />
@@ -479,6 +554,17 @@ export default function RoomPage() {
                       >
                         <Reply className="h-4 w-4" />
                       </Button>
+                      {msg.user === username && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleEditMessage(msg)}
+                          title="Edit"
+                        >
+                          <Edit2 className="h-3 w-3" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -505,7 +591,15 @@ export default function RoomPage() {
                         {(msg as any).replyTo.text.substring(0, 50)}{(msg as any).replyTo.text.length > 50 ? '...' : ''}
                       </div>
                     )}
-                    <p className="text-sm leading-relaxed break-words">{msg.text}</p>
+                    <p className="text-sm leading-relaxed break-words">{renderTextWithMentions(msg.text)}</p>
+                    {msg.readBy && msg.readBy.length > 0 && msg.user === username && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                        {msg.readBy.length === 1 ? <Check className="h-3 w-3" /> : <CheckCheck className="h-3 w-3 text-blue-500" />}
+                        <span className="text-[10px]">
+                          {msg.readBy.length === onlineUsers.length - 1 ? 'Read by all' : `Read by ${msg.readBy.length}`}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -520,48 +614,122 @@ export default function RoomPage() {
         {/* Active User Sidebar */}
         {showUserList && (
           <div className="w-full sm:w-72 border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 overflow-y-auto absolute inset-y-0 right-0 z-20 shadow-xl transition-all duration-300 ease-in-out flex flex-col">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b">
-              <div>
-                <h2 className="font-bold text-lg">Active Users</h2>
-                <p className="text-xs text-muted-foreground">{onlineUsers.length} online</p>
+            <div className="flex justify-between items-center mb-4 pb-4 border-b">
+              <div className="flex gap-2">
+                <Button
+                  variant={!showStats ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setShowStats(false)}
+                  className="h-8"
+                >
+                  <Users className="h-4 w-4 mr-1" />
+                  Users
+                </Button>
+                <Button
+                  variant={showStats ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setShowStats(true)}
+                  className="h-8"
+                >
+                  <BarChart3 className="h-4 w-4 mr-1" />
+                  Stats
+                </Button>
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setShowUserList(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <ul className="space-y-3 flex-1">
-              {onlineUsers.map((u) => (
-                <li key={u} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
-                  <div className="relative">
-                    <Avatar className="h-8 w-8 border bg-muted">
-                      <AvatarFallback className="text-xs font-bold">{u.substring(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background"></span>
+
+            {!showStats ? (
+              <>
+                <ul className="space-y-3 flex-1">
+                  {onlineUsers.map((u) => (
+                    <li key={u} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
+                      <div className="relative">
+                        <Avatar className="h-8 w-8 border bg-muted">
+                          <AvatarFallback className="text-xs font-bold">{u.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background"></span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className={`text-sm font-medium ${u === username ? "text-primary" : ""}`}>
+                          {u} {u === username && "(You)"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          {creator === u ? <span className="text-yellow-600 font-semibold">👑 Owner</span> : 'Online'}
+                        </span>
+                      </div>
+                      {u !== username && u !== creator && (
+                        <Button variant="ghost" size="icon" className="ml-auto h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleKick(u)} title="Kick User">
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-auto pt-4 border-t text-center text-xs text-muted-foreground">
+                  <p>Passkey: <span className="font-mono bg-muted px-1 rounded">{passkey}</span></p>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 overflow-y-auto space-y-4">
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2 flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Room Statistics
+                  </h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total Messages:</span>
+                      <span className="font-semibold">{messages.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Active Users:</span>
+                      <span className="font-semibold">{onlineUsers.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Room Age:</span>
+                      <span className="font-semibold">
+                        {messages.length > 0
+                          ? Math.floor((Date.now() - messages[0].timestamp) / 1000 / 60) + ' min'
+                          : 'New'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Most Active:</span>
+                      <span className="font-semibold">
+                        {messages.length > 0
+                          ? Object.entries(
+                            messages.reduce((acc: Record<string, number>, msg) => {
+                              if (msg.user !== 'System') {
+                                acc[msg.user] = (acc[msg.user] || 0) + 1;
+                              }
+                              return acc;
+                            }, {})
+                          ).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'
+                          : 'N/A'}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span className={`text-sm font-medium ${u === username ? "text-primary" : ""}`}>
-                      {u} {u === username && "(You)"}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      {creator === u ? <span className="text-yellow-600 font-semibold">👑 Owner</span> : 'Online'}
-                    </span>
-                  </div>
-                  {u !== username && u !== creator && (
-                    <Button variant="ghost" size="icon" className="ml-auto h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleKick(u)} title="Kick User">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-auto pt-4 border-t text-center text-xs text-muted-foreground">
-              <p>Passkey: <span className="font-mono bg-muted px-1 rounded">{passkey}</span></p>
-            </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
 
       <footer className="p-2 sm:p-4 border-t shrink-0 bg-background">
+        {editingMessage && (
+          <div className="flex items-center justify-between bg-blue-500/10 p-2 rounded-t-md text-sm border-x border-t mx-1 border-blue-500/20">
+            <div className="flex items-center gap-2">
+              <Edit2 className="h-4 w-4 text-blue-600" />
+              <span className="font-semibold text-blue-600">Editing message</span>
+            </div>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCancelEdit}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
         {replyTo && (
           <div className="flex items-center justify-between bg-muted/50 p-2 rounded-t-md text-sm border-x border-t mx-1">
             <div className="flex items-center gap-2 truncate">
@@ -580,16 +748,44 @@ export default function RoomPage() {
               {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
             </div>
           )}
+          {showMentionDropdown && (
+            <div className="absolute bottom-full left-0 mb-2 bg-popover border rounded-lg shadow-lg max-h-40 overflow-y-auto w-48 z-50">
+              {onlineUsers
+                .filter(u => u.toLowerCase().includes(mentionFilter.toLowerCase()) && u !== username)
+                .map(u => (
+                  <button
+                    key={u}
+                    type="button"
+                    onClick={() => handleMentionSelect(u)}
+                    className="w-full text-left px-3 py-2 hover:bg-muted text-sm flex items-center gap-2"
+                  >
+                    <span className="font-medium">@{u}</span>
+                  </button>
+                ))}
+            </div>
+          )}
+          {creator === username && (
+            <Button
+              type="button"
+              variant={isAnnouncementMode ? "default" : "ghost"}
+              size="icon"
+              onClick={() => setIsAnnouncementMode(!isAnnouncementMode)}
+              className="shrink-0"
+              title="Announcement Mode"
+            >
+              <Megaphone className="h-4 w-4" />
+            </Button>
+          )}
           <Input
-            placeholder="Type a message..."
+            placeholder={editingMessage ? "Edit your message..." : isAnnouncementMode ? "📢 Announcement..." : "Type a message..."}
             value={currentMessage}
-            onChange={(e) => setCurrentMessage(e.target.value)}
+            onChange={handleMessageInputChange}
             disabled={!isAuthenticated || isSending}
             autoComplete="off"
             maxLength={1000}
           />
           <Button type="submit" disabled={!isAuthenticated || !currentMessage.trim() || isSending}>
-            {isSending ? 'Sending...' : 'Send'}
+            {isSending ? 'Sending...' : editingMessage ? 'Save' : 'Send'}
           </Button>
         </form>
       </footer>
