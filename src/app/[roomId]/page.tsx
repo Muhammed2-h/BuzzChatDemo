@@ -38,6 +38,7 @@ export default function RoomPage() {
   const [showUserList, setShowUserList] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [pinnedMessage, setPinnedMessage] = useState<Message | null>(null);
+  const [pinnedBy, setPinnedBy] = useState<string[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -225,7 +226,11 @@ export default function RoomPage() {
           if (data.typingUsers) {
             setTypingUsers(data.typingUsers);
           }
+          if (data.typingUsers) {
+            setTypingUsers(data.typingUsers);
+          }
           setPinnedMessage(data.pinnedMessage || null);
+          setPinnedBy(data.pinnedBy || []);
         }
       } catch (error) {
         if (isActive) {
@@ -331,13 +336,14 @@ export default function RoomPage() {
         </div>
       </header>
 
-      {/* Pinned Message Banner */}
       {pinnedMessage && (
         <div className="flex items-center justify-between bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2 text-sm">
           <div className="flex items-center gap-2 overflow-hidden">
             <Pin className="h-4 w-4 text-yellow-600 shrink-0 fill-yellow-600" />
             <div className="flex flex-col truncate">
-              <span className="font-bold text-yellow-700 text-xs">Pinned by {pinnedMessage.user}</span>
+              <span className="font-bold text-yellow-700 text-xs">
+                Pinned by {pinnedBy.length > 0 ? pinnedBy.join(', ') : '...'}
+              </span>
               <span className="truncate text-foreground/80">{pinnedMessage.text}</span>
             </div>
           </div>
