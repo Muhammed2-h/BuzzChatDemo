@@ -265,7 +265,7 @@ export default function RoomPage() {
         <div>
           <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
           <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
-          <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
+
           <p className="text-xs text-muted-foreground mt-2 font-mono bg-muted p-1 rounded-md inline-block">Passkey: {passkey}</p>
         </div>
         <div className="flex items-center gap-2">
