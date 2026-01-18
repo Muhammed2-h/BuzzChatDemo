@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff, Users, X, Reply } from 'lucide-react';
 import type { Message } from '@/lib/rooms';
 
 export default function RoomPage() {
@@ -35,6 +35,8 @@ export default function RoomPage() {
   const [error, setError] = useState('');
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+  const [showUserList, setShowUserList] = useState(false);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
@@ -106,9 +108,16 @@ export default function RoomPage() {
       await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, passkey, user: username, text: currentMessage }),
+        body: JSON.stringify({ 
+          roomId, 
+          passkey, 
+          user: username, 
+          text: currentMessage,
+          replyTo: replyTo ? { user: replyTo.user, text: replyTo.text } : undefined 
+        }),
       });
       setCurrentMessage('');
+      setReplyTo(null);
     } catch (err) {
       console.error('Failed to send message:', err);
     } finally {
@@ -264,6 +273,12 @@ export default function RoomPage() {
                 {isSoundEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
                 <span className="sr-only">Toggle sound</span>
             </Button>
+            <Button variant="ghost" size="icon" onClick={() => setShowUserList(!showUserList)} className="h-9 w-9 relative">
+                <Users className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
+                  {onlineUsers.length}
+                </span>
+            </Button>
           <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">Clear Chat</Button>
@@ -285,32 +300,81 @@ export default function RoomPage() {
         </div>
       </header>
 
-      <main className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-6">
-          {messages.map((msg, index) => (
-            <div key={index} className="flex items-start gap-4">
-              <Avatar className="w-10 h-10 border">
-                <AvatarFallback className="bg-secondary text-secondary-foreground">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-semibold">{msg.user}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(msg.timestamp).toLocaleTimeString()}
-                  </span>
+      <main className="flex-1 flex overflow-hidden relative">
+        <div className="flex-1 p-4 overflow-y-auto">
+          <div className="space-y-6">
+            {messages.map((msg, index) => (
+              <div key={index} className="flex items-start gap-4 group">
+                <Avatar className="w-10 h-10 border shrink-0">
+                  <AvatarFallback className="bg-secondary text-secondary-foreground">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-semibold truncate">{msg.user}</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    </span>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setReplyTo(msg)}
+                      title="Reply"
+                    >
+                      <Reply className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {(msg as any).replyTo && (
+                    <div className="text-xs text-muted-foreground border-l-2 pl-2 mb-1 opacity-80">
+                      <span className="font-semibold">@{(msg as any).replyTo.user}: </span>
+                      {(msg as any).replyTo.text.substring(0, 50)}{(msg as any).replyTo.text.length > 50 ? '...' : ''}
+                    </div>
+                  )}
+                  <p className="text-sm leading-relaxed break-words">{msg.text}</p>
                 </div>
-                <p className="text-sm leading-relaxed">{msg.text}</p>
               </div>
-            </div>
-          ))}
-          {messages.length === 0 && (
-             <div className="text-center text-muted-foreground py-10">No messages yet. Say hello!</div>
-          )}
+            ))}
+            {messages.length === 0 && (
+               <div className="text-center text-muted-foreground py-10">No messages yet. Say hello!</div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
         </div>
-        <div ref={messagesEndRef} />
+        
+        {/* Active User Sidebar */}
+        {showUserList && (
+           <div className="w-64 border-l bg-background p-4 overflow-y-auto absolute inset-y-0 right-0 z-20 shadow-lg md:relative md:shadow-none transition-all duration-300 ease-in-out">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-semibold">Active Users ({onlineUsers.length})</h2>
+                <Button variant="ghost" size="icon" className="h-8 w-8 md:hidden" onClick={() => setShowUserList(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <ul className="space-y-2">
+                {onlineUsers.map((u) => (
+                  <li key={u} className="flex items-center gap-2 text-sm p-2 rounded hover:bg-muted/50">
+                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className={u === username ? "font-bold" : ""}>{u} {u === username && "(You)"}</span>
+                  </li>
+                ))}
+              </ul>
+           </div>
+        )}
       </main>
 
       <footer className="p-4 border-t shrink-0 bg-background">
+        {replyTo && (
+          <div className="flex items-center justify-between bg-muted/50 p-2 rounded-t-md text-sm border-x border-t mx-1">
+            <div className="flex items-center gap-2 truncate">
+              <Reply className="h-4 w-4" />
+              <span className="font-semibold">Replying to {replyTo.user}:</span>
+              <span className="text-muted-foreground truncate max-w-[200px]">{replyTo.text}</span>
+            </div>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReplyTo(null)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
         <form onSubmit={handleSend} className="flex gap-2">
           <Input
             placeholder="Type a message..."

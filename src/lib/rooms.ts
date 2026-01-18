@@ -2,6 +2,10 @@ export interface Message {
   user: string;
   text: string;
   timestamp: number;
+  replyTo?: {
+    user: string;
+    text: string;
+  };
 }
 
 export interface User {

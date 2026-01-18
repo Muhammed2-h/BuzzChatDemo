@@ -3,14 +3,14 @@ import { rooms, type Message } from '@/lib/rooms';
 
 export async function POST(request: Request) {
   try {
-    const { roomId, passkey, user, text } = await request.json();
+    const { roomId, passkey, user, text, replyTo } = await request.json();
 
     if (!roomId || !passkey || !user || !text) {
       return NextResponse.json({ success: false, error: 'Missing required fields: roomId, passkey, user, and text.' }, { status: 400 });
     }
-    
+
     if (text.length > 1000) {
-        return NextResponse.json({ success: false, error: 'Message is too long.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Message is too long.' }, { status: 400 });
     }
 
     const room = rooms[roomId];
@@ -22,13 +22,14 @@ export async function POST(request: Request) {
     // Update user's lastSeen timestamp
     const sendingUser = room.users.find(u => u.username === user);
     if (sendingUser) {
-        sendingUser.lastSeen = Date.now();
+      sendingUser.lastSeen = Date.now();
     }
 
     const message: Message = {
       user,
       text,
       timestamp: Date.now(),
+      replyTo: replyTo,
     };
 
     room.messages.push(message);
