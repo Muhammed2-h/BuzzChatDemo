@@ -5,7 +5,7 @@ export async function POST(request: Request) {
     try {
         const { roomId, passkey, adminUser, targetUser, action } = await request.json();
 
-        if (!roomId || !passkey || !adminUser || !targetUser || !action) {
+        if (!roomId || !passkey || !adminUser || !action) {
             return NextResponse.json({ success: false, error: 'Missing required fields.' }, { status: 400 });
         }
 
@@ -32,6 +32,13 @@ export async function POST(request: Request) {
                     id: crypto.randomUUID()
                 });
             }
+        } else if (action === 'deleteRoom') {
+            if (room.creator !== adminUser) {
+                return NextResponse.json({ success: false, error: 'Only the room creator can delete the room.' }, { status: 403 });
+            }
+            delete rooms[sanitizeId(roomId)];
+            saveRooms();
+            return NextResponse.json({ success: true, message: 'Room deleted.' });
         }
 
         saveRooms();

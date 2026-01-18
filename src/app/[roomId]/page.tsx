@@ -196,331 +196,355 @@ export default function RoomPage() {
     } catch (err) {
       console.error('Failed to kick user:', err);
     }
+    console.error('Failed to kick user:', err);
+  }
+};
+
+const handleDeleteRoom = async () => {
+  if (!confirm('Are you sure you want to PERMANENTLY DELETE this room? All data will be lost forever.')) return;
+  try {
+    await fetch('/api/admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId, passkey, adminUser: username, action: 'deleteRoom' }),
+    });
+    // The room is deleted. The polling loop will catch the error/401 soon, 
+    // or we can force redirect immediately.
+    router.push('/');
+  } catch (err) {
+    console.error('Failed to delete room:', err);
+  }
+};
+
+useEffect(() => {
+  if (!isAuthenticated) return;
+
+  let isActive = true;
+  let timeoutId: NodeJS.Timeout;
+
+  const pollMessages = async () => {
+    try {
+      const isTyping = currentMessage.length > 0;
+      const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}&isTyping=${isTyping}`);
+
+      if (!isActive) return;
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setIsAuthenticated(false);
+        setError(errData.error || 'Connection lost. Please re-join.');
+        return; // Stop polling
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        const receivedMessages: Message[] = data.messages;
+        if (receivedMessages.length > 0) {
+          const hasNewMessageFromOthers = receivedMessages.some(msg => msg.user !== username && msg.user !== 'System');
+          if (hasNewMessageFromOthers) {
+            playNotificationSound();
+          }
+
+          setMessages(prev => {
+            const combined = [...prev, ...receivedMessages];
+            const uniqueMessages = Array.from(new Map(combined.map(m => [m.timestamp, m])).values());
+            return uniqueMessages.sort((a, b) => a.timestamp - b.timestamp);
+          });
+
+          const sortedReceived = [...receivedMessages].sort((a, b) => a.timestamp - b.timestamp);
+          lastMessageTimestamp.current = sortedReceived[sortedReceived.length - 1].timestamp;
+        }
+        if (data.users) {
+          setOnlineUsers(data.users);
+        }
+        if (data.typingUsers) {
+          setTypingUsers(data.typingUsers);
+        }
+        if (data.typingUsers) {
+          setTypingUsers(data.typingUsers);
+        }
+        setPinnedMessage(data.pinnedMessage || null);
+        setPinnedBy(data.pinnedBy || []);
+        setCreator(data.creator || null);
+      }
+    } catch (error) {
+      if (isActive) {
+        console.error('Polling error:', error);
+      }
+    } finally {
+      if (isActive) {
+        timeoutId = setTimeout(pollMessages, 2000);
+      }
+    }
   };
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
+  pollMessages();
 
-    let isActive = true;
-    let timeoutId: NodeJS.Timeout;
+  return () => {
+    isActive = false;
+    clearTimeout(timeoutId);
+  };
+}, [isAuthenticated, roomId, passkey, username, currentMessage]);
 
-    const pollMessages = async () => {
-      try {
-        const isTyping = currentMessage.length > 0;
-        const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}&isTyping=${isTyping}`);
-
-        if (!isActive) return;
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          setIsAuthenticated(false);
-          setError(errData.error || 'Connection lost. Please re-join.');
-          return; // Stop polling
-        }
-
-        const data = await res.json();
-        if (data.success) {
-          const receivedMessages: Message[] = data.messages;
-          if (receivedMessages.length > 0) {
-            const hasNewMessageFromOthers = receivedMessages.some(msg => msg.user !== username && msg.user !== 'System');
-            if (hasNewMessageFromOthers) {
-              playNotificationSound();
-            }
-
-            setMessages(prev => {
-              const combined = [...prev, ...receivedMessages];
-              const uniqueMessages = Array.from(new Map(combined.map(m => [m.timestamp, m])).values());
-              return uniqueMessages.sort((a, b) => a.timestamp - b.timestamp);
-            });
-
-            const sortedReceived = [...receivedMessages].sort((a, b) => a.timestamp - b.timestamp);
-            lastMessageTimestamp.current = sortedReceived[sortedReceived.length - 1].timestamp;
-          }
-          if (data.users) {
-            setOnlineUsers(data.users);
-          }
-          if (data.typingUsers) {
-            setTypingUsers(data.typingUsers);
-          }
-          if (data.typingUsers) {
-            setTypingUsers(data.typingUsers);
-          }
-          setPinnedMessage(data.pinnedMessage || null);
-          setPinnedBy(data.pinnedBy || []);
-          setCreator(data.creator || null);
-        }
-      } catch (error) {
-        if (isActive) {
-          console.error('Polling error:', error);
-        }
-      } finally {
-        if (isActive) {
-          timeoutId = setTimeout(pollMessages, 2000);
-        }
-      }
-    };
-
-    pollMessages();
-
-    return () => {
-      isActive = false;
-      clearTimeout(timeoutId);
-    };
-  }, [isAuthenticated, roomId, passkey, username, currentMessage]);
-
-  if (!isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Card className="w-full max-w-md mx-4">
-          <CardHeader>
-            <CardTitle className="font-headline">Join Room: {roomId}</CardTitle>
-            <CardDescription>
-              Enter a username and the room's passkey. If the room is new, your passkey will set it.
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleJoin}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  placeholder="Your name"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="passkey">Passkey</Label>
-                <Input
-                  id="passkey"
-                  type="password"
-                  placeholder="Room's secret passkey"
-                  value={passkey}
-                  onChange={(e) => setPasskey(e.target.value)}
-                  required
-                />
-              </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full">Join Chat</Button>
-            </CardFooter>
-          </form>
-        </Card>
-      </div>
-    );
-  }
-
+if (!isAuthenticated) {
   return (
-    <div className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden fixed inset-0">
-      <header className="p-4 border-b shrink-0 flex justify-between items-start bg-background/95 backdrop-blur z-10">
-        <div>
-          <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
-          <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
-
-          <p className="text-xs text-muted-foreground mt-2 font-mono bg-muted p-1 rounded-md inline-block">Passkey: {passkey}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="h-9 w-9">
-            {isSoundEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-            <span className="sr-only">Toggle sound</span>
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => setShowUserList(!showUserList)} className="h-9 w-9 relative">
-            <Users className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
-              {onlineUsers.length}
-            </span>
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">Clear Chat</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action will permanently clear the chat history for this room. This cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleClearChat} className={buttonVariants({ variant: "destructive" })}>Continue</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
-        </div>
-      </header>
-
-      {pinnedMessage && (
-        <div className="flex items-center justify-between bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2 text-sm">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <Pin className="h-4 w-4 text-green-600 shrink-0 fill-green-600" />
-            <div className="flex flex-col truncate">
-              <span className="font-bold text-yellow-700 text-xs">
-                Pinned by {pinnedBy.length > 0 ? pinnedBy.join(', ') : '...'}
-              </span>
-              <span className="truncate text-foreground/80">{pinnedMessage.text}</span>
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <Card className="w-full max-w-md mx-4">
+        <CardHeader>
+          <CardTitle className="font-headline">Join Room: {roomId}</CardTitle>
+          <CardDescription>
+            Enter a username and the room's passkey. If the room is new, your passkey will set it.
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleJoin}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                placeholder="Your name"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
             </div>
-          </div>
-          <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-700 hover:text-yellow-900 hover:bg-yellow-500/20" onClick={handleUnpin}>
-            <X className="h-3 w-3" />
+            <div className="space-y-2">
+              <Label htmlFor="passkey">Passkey</Label>
+              <Input
+                id="passkey"
+                type="password"
+                placeholder="Room's secret passkey"
+                value={passkey}
+                onChange={(e) => setPasskey(e.target.value)}
+                required
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" className="w-full">Join Chat</Button>
+          </CardFooter>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+return (
+  <div className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden fixed inset-0">
+    <header className="p-4 border-b shrink-0 flex justify-between items-start bg-background/95 backdrop-blur z-10">
+      <div>
+        <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
+        <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
+
+        <p className="text-xs text-muted-foreground mt-2 font-mono bg-muted p-1 rounded-md inline-block">Passkey: {passkey}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="h-9 w-9">
+          {isSoundEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+          <span className="sr-only">Toggle sound</span>
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => setShowUserList(!showUserList)} className="h-9 w-9 relative">
+          <Users className="h-5 w-5" />
+          <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
+            {onlineUsers.length}
+          </span>
+        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive">Clear Chat</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will permanently clear the chat history for this room. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleClearChat} className={buttonVariants({ variant: "destructive" })}>Continue</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
+        {creator === username && (
+          <Button variant="destructive" onClick={handleDeleteRoom} title="Delete Room Permanently">
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Delete Room</span>
           </Button>
+        )}
+      </div>
+    </header>
+
+    {pinnedMessage && (
+      <div className="flex items-center justify-between bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2 text-sm">
+        <div className="flex items-center gap-2 overflow-hidden">
+          <Pin className="h-4 w-4 text-green-600 shrink-0 fill-green-600" />
+          <div className="flex flex-col truncate">
+            <span className="font-bold text-yellow-700 text-xs">
+              Pinned by {pinnedBy.length > 0 ? pinnedBy.join(', ') : '...'}
+            </span>
+            <span className="truncate text-foreground/80">{pinnedMessage.text}</span>
+          </div>
         </div>
-      )}
+        <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-700 hover:text-yellow-900 hover:bg-yellow-500/20" onClick={handleUnpin}>
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+    )}
 
-      <main className="flex-1 flex overflow-hidden relative">
-        <div className="flex-1 p-4 overflow-y-auto">
-          <div className="space-y-6">
-            {messages.map((msg, index) => {
-              if (msg.user === 'System') {
-                return (
-                  <div key={index} className="flex justify-center my-2">
-                    <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
-                      {msg.text}
-                    </span>
-                  </div>
-                );
-              }
-
+    <main className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 p-4 overflow-y-auto">
+        <div className="space-y-6">
+          {messages.map((msg, index) => {
+            if (msg.user === 'System') {
               return (
-                <div key={index} id={msg.id} className="flex items-start gap-4 group">
-                  <Avatar className="w-10 h-10 border shrink-0">
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-semibold truncate">{msg.user}</span>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(msg.timestamp).toLocaleTimeString()}
-                      </span>
-                      {pinnedMessage && pinnedMessage.timestamp === msg.timestamp && (
-                        <Pin className="h-3 w-3 fill-green-500 text-green-500 ml-1" />
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setReplyTo(msg)}
-                        title="Reply"
-                      >
-                        <Reply className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => handlePin(msg)}
-                        title="Pin Message"
-                      >
-                        <Pin className={`h-3 w-3 ${pinnedMessage?.timestamp === msg.timestamp ? 'fill-green-500 text-green-500' : ''}`} />
-                      </Button>
-                    </div>
-                    {(msg as any).replyTo && (
-                      <div
-                        className="text-xs text-muted-foreground border-l-2 pl-2 mb-1 opacity-80 cursor-pointer hover:bg-muted/50 rounded-r transition-colors"
-                        onClick={() => {
-                          const element = document.getElementById((msg as any).replyTo.id);
-                          if (element) {
-                            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            element.classList.add('bg-muted/50');
-                            setTimeout(() => element.classList.remove('bg-muted/50'), 2000);
-                          }
-                        }}
-                      >
-                        <span className="font-semibold">@{(msg as any).replyTo.user}: </span>
-                        {(msg as any).replyTo.text.substring(0, 50)}{(msg as any).replyTo.text.length > 50 ? '...' : ''}
-                      </div>
-                    )}
-                    <p className="text-sm leading-relaxed break-words">{msg.text}</p>
-                  </div>
+                <div key={index} className="flex justify-center my-2">
+                  <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+                    {msg.text}
+                  </span>
                 </div>
               );
-            })}
-            {messages.length === 0 && (
-              <div className="text-center text-muted-foreground py-10">No messages yet. Say hello!</div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
+            }
 
-        {/* Active User Sidebar */}
-        {showUserList && (
-          <div className="w-full sm:w-72 border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 overflow-y-auto absolute inset-y-0 right-0 z-20 shadow-xl transition-all duration-300 ease-in-out flex flex-col">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b">
-              <div>
-                <h2 className="font-bold text-lg">Active Users</h2>
-                <p className="text-xs text-muted-foreground">{onlineUsers.length} online</p>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setShowUserList(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <ul className="space-y-3 flex-1">
-              {onlineUsers.map((u) => (
-                <li key={u} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
-                  <div className="relative">
-                    <Avatar className="h-8 w-8 border bg-muted">
-                      <AvatarFallback className="text-xs font-bold">{u.substring(0, 2).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background"></span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className={`text-sm font-medium ${u === username ? "text-primary" : ""}`}>
-                      {u} {u === username && "(You)"}
+            return (
+              <div key={index} id={msg.id} className="flex items-start gap-4 group">
+                <Avatar className="w-10 h-10 border shrink-0">
+                  <AvatarFallback className="bg-secondary text-secondary-foreground">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-semibold truncate">{msg.user}</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(msg.timestamp).toLocaleTimeString()}
                     </span>
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      {creator === u ? <span className="text-yellow-600 font-semibold">👑 Owner</span> : 'Online'}
-                    </span>
-                  </div>
-                  {u !== username && (
-                    <Button variant="ghost" size="icon" className="ml-auto h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleKick(u)} title="Kick User">
-                      <X className="h-4 w-4" />
+                    {pinnedMessage && pinnedMessage.timestamp === msg.timestamp && (
+                      <Pin className="h-3 w-3 fill-green-500 text-green-500 ml-1" />
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setReplyTo(msg)}
+                      title="Reply"
+                    >
+                      <Reply className="h-4 w-4" />
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handlePin(msg)}
+                      title="Pin Message"
+                    >
+                      <Pin className={`h-3 w-3 ${pinnedMessage?.timestamp === msg.timestamp ? 'fill-green-500 text-green-500' : ''}`} />
+                    </Button>
+                  </div>
+                  {(msg as any).replyTo && (
+                    <div
+                      className="text-xs text-muted-foreground border-l-2 pl-2 mb-1 opacity-80 cursor-pointer hover:bg-muted/50 rounded-r transition-colors"
+                      onClick={() => {
+                        const element = document.getElementById((msg as any).replyTo.id);
+                        if (element) {
+                          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          element.classList.add('bg-muted/50');
+                          setTimeout(() => element.classList.remove('bg-muted/50'), 2000);
+                        }
+                      }}
+                    >
+                      <span className="font-semibold">@{(msg as any).replyTo.user}: </span>
+                      {(msg as any).replyTo.text.substring(0, 50)}{(msg as any).replyTo.text.length > 50 ? '...' : ''}
+                    </div>
                   )}
-                </li>
-              ))}
-            </ul>
-            <div className="mt-auto pt-4 border-t text-center text-xs text-muted-foreground">
-              <p>Passkey: <span className="font-mono bg-muted px-1 rounded">{passkey}</span></p>
-            </div>
-          </div>
-        )}
-      </main>
+                  <p className="text-sm leading-relaxed break-words">{msg.text}</p>
+                </div>
+              </div>
+            );
+          })}
+          {messages.length === 0 && (
+            <div className="text-center text-muted-foreground py-10">No messages yet. Say hello!</div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
 
-      <footer className="p-4 border-t shrink-0 bg-background">
-        {replyTo && (
-          <div className="flex items-center justify-between bg-muted/50 p-2 rounded-t-md text-sm border-x border-t mx-1">
-            <div className="flex items-center gap-2 truncate">
-              <Reply className="h-4 w-4" />
-              <span className="font-semibold">Replying to {replyTo.user}:</span>
-              <span className="text-muted-foreground truncate max-w-[200px]">{replyTo.text}</span>
+      {/* Active User Sidebar */}
+      {showUserList && (
+        <div className="w-full sm:w-72 border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 overflow-y-auto absolute inset-y-0 right-0 z-20 shadow-xl transition-all duration-300 ease-in-out flex flex-col">
+          <div className="flex justify-between items-center mb-6 pb-4 border-b">
+            <div>
+              <h2 className="font-bold text-lg">Active Users</h2>
+              <p className="text-xs text-muted-foreground">{onlineUsers.length} online</p>
             </div>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReplyTo(null)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setShowUserList(false)}>
               <X className="h-4 w-4" />
             </Button>
           </div>
-        )}
-        <form onSubmit={handleSend} className="flex gap-2 relative">
-          {typingUsers.length > 0 && (
-            <div className="absolute -top-6 left-0 text-xs text-muted-foreground animate-pulse">
-              {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
-            </div>
-          )}
-          <Input
-            placeholder="Type a message..."
-            value={currentMessage}
-            onChange={(e) => setCurrentMessage(e.target.value)}
-            disabled={!isAuthenticated || isSending}
-            autoComplete="off"
-            maxLength={1000}
-          />
-          <Button type="submit" disabled={!isAuthenticated || !currentMessage.trim() || isSending}>
-            {isSending ? 'Sending...' : 'Send'}
+          <ul className="space-y-3 flex-1">
+            {onlineUsers.map((u) => (
+              <li key={u} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
+                <div className="relative">
+                  <Avatar className="h-8 w-8 border bg-muted">
+                    <AvatarFallback className="text-xs font-bold">{u.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background"></span>
+                </div>
+                <div className="flex flex-col">
+                  <span className={`text-sm font-medium ${u === username ? "text-primary" : ""}`}>
+                    {u} {u === username && "(You)"}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    {creator === u ? <span className="text-yellow-600 font-semibold">👑 Owner</span> : 'Online'}
+                  </span>
+                </div>
+                {u !== username && (
+                  <Button variant="ghost" size="icon" className="ml-auto h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleKick(u)} title="Kick User">
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-auto pt-4 border-t text-center text-xs text-muted-foreground">
+            <p>Passkey: <span className="font-mono bg-muted px-1 rounded">{passkey}</span></p>
+          </div>
+        </div>
+      )}
+    </main>
+
+    <footer className="p-4 border-t shrink-0 bg-background">
+      {replyTo && (
+        <div className="flex items-center justify-between bg-muted/50 p-2 rounded-t-md text-sm border-x border-t mx-1">
+          <div className="flex items-center gap-2 truncate">
+            <Reply className="h-4 w-4" />
+            <span className="font-semibold">Replying to {replyTo.user}:</span>
+            <span className="text-muted-foreground truncate max-w-[200px]">{replyTo.text}</span>
+          </div>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setReplyTo(null)}>
+            <X className="h-4 w-4" />
           </Button>
-        </form>
-      </footer>
-    </div>
-  );
+        </div>
+      )}
+      <form onSubmit={handleSend} className="flex gap-2 relative">
+        {typingUsers.length > 0 && (
+          <div className="absolute -top-6 left-0 text-xs text-muted-foreground animate-pulse">
+            {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+          </div>
+        )}
+        <Input
+          placeholder="Type a message..."
+          value={currentMessage}
+          onChange={(e) => setCurrentMessage(e.target.value)}
+          disabled={!isAuthenticated || isSending}
+          autoComplete="off"
+          maxLength={1000}
+        />
+        <Button type="submit" disabled={!isAuthenticated || !currentMessage.trim() || isSending}>
+          {isSending ? 'Sending...' : 'Send'}
+        </Button>
+      </form>
+    </footer>
+  </div>
+);
 }

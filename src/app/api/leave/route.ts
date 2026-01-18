@@ -16,13 +16,7 @@ export async function POST(request: Request) {
 
     const room = rooms[sanitizeId(roomId)];
 
-    // Check if the user leaving is the creator
-    if (room.creator === username) {
-      // Delete the room entirely
-      delete rooms[sanitizeId(roomId)];
-      saveRooms();
-      return NextResponse.json({ success: true, message: 'Room deleted by owner.' });
-    }
+
 
     const userIndex = room.users.findIndex(user => user.username === username);
     if (userIndex !== -1) {
