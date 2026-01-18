@@ -341,53 +341,62 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden fixed inset-0">
-      <header className="p-3 sm:p-4 border-b shrink-0 flex justify-between items-center bg-background/95 backdrop-blur z-10">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg sm:text-xl font-bold font-headline truncate max-w-[150px] sm:max-w-none">Room: {roomId}</h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate">User: {username}</span>
-            <span className="text-[10px] text-muted-foreground/40 border-l pl-2 hidden sm:inline">Passkey: {passkey}</span>
+      <header className="p-3 sm:px-6 sm:py-4 border-b shrink-0 flex justify-between items-center bg-background/95 backdrop-blur-md z-10 shadow-sm">
+        <div className="min-w-0 flex-1 pr-2">
+          <h1 className="text-lg sm:text-2xl font-bold font-headline truncate tracking-tight text-primary">Room: {roomId}</h1>
+          <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+              <span className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate max-w-[100px] sm:max-w-none">{username}</span>
+            </div>
+            <span className="text-[10px] text-muted-foreground/40 border-l pl-3 hidden md:inline font-mono">ID: {passkey}</span>
           </div>
         </div>
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          <Button variant="ghost" size="icon" onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="h-8 w-8 sm:h-9 sm:w-9">
-            {isSoundEnabled ? <Bell className="h-4 w-4 sm:h-5 sm:w-5" /> : <BellOff className="h-4 w-4 sm:h-5 sm:w-5" />}
-            <span className="sr-only">Toggle sound</span>
+
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <Button variant="ghost" size="icon" onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="h-8 w-8 sm:h-10 sm:w-10 rounded-full hover:bg-muted" title={isSoundEnabled ? "Mute" : "Unmute"}>
+            {isSoundEnabled ? <Bell className="h-4 w-4 sm:h-5 sm:w-5" /> : <BellOff className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setShowUserList(!showUserList)} className="h-8 w-8 sm:h-9 sm:w-9 relative">
+
+          <Button variant="ghost" size="icon" onClick={() => setShowUserList(!showUserList)} className="h-8 w-8 sm:h-10 sm:w-10 rounded-full hover:bg-muted relative">
             <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[9px] text-primary-foreground font-bold leading-none">
+            <span className="absolute -top-0.5 -right-0.5 flex h-3.5 w-3.5 sm:h-4 sm:w-4 items-center justify-center rounded-full bg-primary text-[8px] sm:text-[10px] text-primary-foreground font-bold border-2 border-background">
               {onlineUsers.length}
             </span>
           </Button>
+
+          <div className="h-6 w-[1px] bg-border mx-1 hidden sm:block"></div>
+
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 text-destructive" title="Clear Chat">
+              <Button variant="ghost" className="h-8 w-8 sm:h-10 sm:w-auto sm:px-4 rounded-full sm:rounded-lg text-destructive hover:bg-destructive/10 p-0 sm:p-2">
                 <Eraser className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="hidden sm:inline ml-2">Clear</span>
+                <span className="hidden sm:inline ml-2 text-sm font-medium">Clear</span>
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogTitle>Clear Chat History?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action will permanently clear the chat history for this room. This cannot be undone.
+                  This will permanently delete all messages in this room. This action cannot be reversed.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleClearChat} className={buttonVariants({ variant: "destructive" })}>Continue</AlertDialogAction>
+                <AlertDialogAction onClick={handleClearChat} className={buttonVariants({ variant: "destructive" })}>Clear All</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <Button variant="ghost" size="icon" onClick={handleDisconnect} className="h-8 w-8 sm:h-9 sm:w-9" title="Disconnect">
+
+          <Button variant="ghost" onClick={handleDisconnect} className="h-8 w-8 sm:h-10 sm:w-auto sm:px-4 rounded-full sm:rounded-lg hover:bg-muted p-0 sm:p-2" title="Leave Room">
             <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="hidden sm:inline ml-2">Leave</span>
+            <span className="hidden sm:inline ml-2 text-sm font-medium">Leave</span>
           </Button>
+
           {creator === username && (
-            <Button variant="destructive" size="icon" onClick={handleDeleteRoom} className="h-8 w-8 sm:h-9 sm:w-9" title="Delete Room Permanently">
+            <Button variant="destructive" onClick={handleDeleteRoom} className="h-8 w-8 sm:h-10 sm:w-auto sm:px-4 rounded-full sm:rounded-lg p-0 sm:p-2 shadow-sm" title="Delete Room Permanently">
               <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="sr-only">Delete Room</span>
+              <span className="hidden sm:inline ml-2 text-sm font-medium text-white">Delete</span>
             </Button>
           )}
         </div>
