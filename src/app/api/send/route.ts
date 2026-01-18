@@ -26,6 +26,7 @@ export async function POST(request: Request) {
     }
 
     const message: Message = {
+      id: crypto.randomUUID(),
       user,
       text,
       timestamp: Date.now(),

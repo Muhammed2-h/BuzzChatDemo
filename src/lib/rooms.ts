@@ -8,7 +8,9 @@ export interface Message {
   replyTo?: {
     user: string;
     text: string;
+    id?: string;
   };
+  id: string;
 }
 
 export interface User {

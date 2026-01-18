@@ -116,7 +116,8 @@ export default function RoomPage() {
           passkey,
           user: username,
           text: currentMessage,
-          replyTo: replyTo ? { user: replyTo.user, text: replyTo.text } : undefined
+          text: currentMessage,
+          replyTo: replyTo ? { user: replyTo.user, text: replyTo.text, id: replyTo.id } : undefined
         }),
       });
       setCurrentMessage('');
@@ -368,7 +369,7 @@ export default function RoomPage() {
               }
 
               return (
-                <div key={index} className="flex items-start gap-4 group">
+                <div key={index} id={msg.id} className="flex items-start gap-4 group">
                   <Avatar className="w-10 h-10 border shrink-0">
                     <AvatarFallback className="bg-secondary text-secondary-foreground">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
@@ -401,7 +402,17 @@ export default function RoomPage() {
                       </Button>
                     </div>
                     {(msg as any).replyTo && (
-                      <div className="text-xs text-muted-foreground border-l-2 pl-2 mb-1 opacity-80">
+                      <div
+                        className="text-xs text-muted-foreground border-l-2 pl-2 mb-1 opacity-80 cursor-pointer hover:bg-muted/50 rounded-r transition-colors"
+                        onClick={() => {
+                          const element = document.getElementById((msg as any).replyTo.id);
+                          if (element) {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            element.classList.add('bg-muted/50');
+                            setTimeout(() => element.classList.remove('bg-muted/50'), 2000);
+                          }
+                        }}
+                      >
                         <span className="font-semibold">@{(msg as any).replyTo.user}: </span>
                         {(msg as any).replyTo.text.substring(0, 50)}{(msg as any).replyTo.text.length > 50 ? '...' : ''}
                       </div>
