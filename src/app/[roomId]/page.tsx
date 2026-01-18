@@ -39,7 +39,9 @@ export default function RoomPage() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [pinnedMessage, setPinnedMessage] = useState<Message | null>(null);
   const [pinnedBy, setPinnedBy] = useState<string[]>([]);
+
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [creator, setCreator] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
@@ -245,6 +247,7 @@ export default function RoomPage() {
           }
           setPinnedMessage(data.pinnedMessage || null);
           setPinnedBy(data.pinnedBy || []);
+          setCreator(data.creator || null);
         }
       } catch (error) {
         if (isActive) {
@@ -467,7 +470,9 @@ export default function RoomPage() {
                     <span className={`text-sm font-medium ${u === username ? "text-primary" : ""}`}>
                       {u} {u === username && "(You)"}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">Online</span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      {creator === u ? <span className="text-yellow-600 font-semibold">👑 Owner</span> : 'Online'}
+                    </span>
                   </div>
                   {u !== username && (
                     <Button variant="ghost" size="icon" className="ml-auto h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleKick(u)} title="Kick User">

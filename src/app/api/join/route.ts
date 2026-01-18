@@ -29,6 +29,7 @@ export async function POST(request: Request) {
           id: crypto.randomUUID()
         }],
         users: [], // users will be added right after
+        creator: username
       };
     }
 

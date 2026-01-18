@@ -72,7 +72,8 @@ export async function GET(request: Request) {
       users: room.users.map(u => u.username),
       typingUsers: room.users.filter(u => u.isTyping && u.username !== username).map(u => u.username),
       pinnedMessage: room.pinnedMessage,
-      pinnedBy: room.pinnedBy
+      pinnedBy: room.pinnedBy,
+      creator: room.creator
     });
   } catch (error) {
     console.error('[API/POLL] Error:', error);

@@ -26,6 +26,7 @@ export interface Room {
   pinnedMessage?: Message | null;
   pinnedBy?: string[];
   bannedUsers?: string[];
+  creator?: string;
 }
 
 // Helper to sanitize Room IDs consistently
