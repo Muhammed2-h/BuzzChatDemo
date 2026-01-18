@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
     const sinceTimestamp = since ? parseInt(since, 10) : 0;
     if (isNaN(sinceTimestamp)) {
-        return NextResponse.json({ success: false, error: 'Invalid "since" timestamp.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Invalid "since" timestamp.' }, { status: 400 });
     }
 
     const now = Date.now();
@@ -39,14 +39,14 @@ export async function GET(request: Request) {
 
     // If user is polling but not in the list, add them. This can happen on server restart or if they were timed out incorrectly.
     if (!userFound) {
-        room.users.push({ username, lastSeen: now });
-        room.messages.push({
-            user: 'System',
-            text: `${username} has reconnected.`,
-            timestamp: now
-        });
+      room.users.push({ username, lastSeen: now });
+      room.messages.push({
+        user: 'System',
+        text: `${username} has reconnected.`,
+        timestamp: now
+      });
     }
-    
+
     // Check for timed out users
     const activeUsers = room.users.filter(user => now - user.lastSeen < INACTIVE_TIMEOUT_MS);
     const timedOutUsers = room.users.filter(user => now - user.lastSeen >= INACTIVE_TIMEOUT_MS);
@@ -66,7 +66,12 @@ export async function GET(request: Request) {
       (msg) => msg.timestamp > sinceTimestamp
     );
 
-    return NextResponse.json({ success: true, messages: newMessages, users: room.users.map(u => u.username) });
+    return NextResponse.json({
+      success: true,
+      messages: newMessages,
+      users: room.users.map(u => u.username),
+      pinnedMessage: room.pinnedMessage
+    });
   } catch (error) {
     console.error('[API/POLL] Error:', error);
     return NextResponse.json({ success: false, error: 'An unexpected server error occurred.' }, { status: 500 });

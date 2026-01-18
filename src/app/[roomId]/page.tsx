@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Bell, BellOff, Users, X, Reply } from 'lucide-react';
+import { Bell, BellOff, Users, X, Reply, Pin } from 'lucide-react';
 import type { Message } from '@/lib/rooms';
 
 export default function RoomPage() {
@@ -37,6 +37,7 @@ export default function RoomPage() {
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [showUserList, setShowUserList] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [pinnedMessage, setPinnedMessage] = useState<Message | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
@@ -156,6 +157,30 @@ export default function RoomPage() {
     }
   };
 
+  const handlePin = async (msg: Message) => {
+    try {
+      await fetch('/api/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, passkey, message: msg, action: 'pin' }),
+      });
+    } catch (err) {
+      console.error('Failed to pin message:', err);
+    }
+  };
+
+  const handleUnpin = async () => {
+    try {
+      await fetch('/api/pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, passkey, action: 'unpin' }),
+      });
+    } catch (err) {
+      console.error('Failed to unpin message:', err);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -195,6 +220,7 @@ export default function RoomPage() {
           if (data.users) {
             setOnlineUsers(data.users);
           }
+          setPinnedMessage(data.pinnedMessage || null);
         }
       } catch (error) {
         if (isActive) {
@@ -261,7 +287,7 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="p-4 border-b shrink-0 flex justify-between items-start">
+      <header className="p-4 border-b shrink-0 flex justify-between items-start bg-background/95 backdrop-blur sticky top-0 z-10">
         <div>
           <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
           <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
@@ -300,6 +326,22 @@ export default function RoomPage() {
         </div>
       </header>
 
+      {/* Pinned Message Banner */}
+      {pinnedMessage && (
+        <div className="flex items-center justify-between bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2 text-sm">
+          <div className="flex items-center gap-2 overflow-hidden">
+            <Pin className="h-4 w-4 text-yellow-600 shrink-0 fill-yellow-600" />
+            <div className="flex flex-col truncate">
+              <span className="font-bold text-yellow-700 text-xs">Pinned by {pinnedMessage.user}</span>
+              <span className="truncate text-foreground/80">{pinnedMessage.text}</span>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" className="h-6 w-6 text-yellow-700 hover:text-yellow-900 hover:bg-yellow-500/20" onClick={handleUnpin}>
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+
       <main className="flex-1 flex overflow-hidden relative">
         <div className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-6">
@@ -322,6 +364,15 @@ export default function RoomPage() {
                       title="Reply"
                     >
                       <Reply className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handlePin(msg)}
+                      title="Pin Message"
+                    >
+                      <Pin className="h-3 w-3" />
                     </Button>
                   </div>
                   {(msg as any).replyTo && (
