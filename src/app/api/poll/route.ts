@@ -40,16 +40,10 @@ export async function GET(request: Request) {
     });
 
     // If user is polling but not in the list, add them. This can happen on server restart or if they were timed out incorrectly.
+    // If user is polling but not in the list, it means they were kicked or timed out.
+    // Do NOT automatically re-add them. 
     if (!userFound) {
-      room.users.push({ username, lastSeen: now, isTyping });
-      // Suppress "reconnected" message to avoid spam on network blips
-      /* 
-      room.messages.push({
-        user: 'System',
-        text: `${username} has reconnected.`,
-        timestamp: now
-      }); 
-      */
+      return NextResponse.json({ success: false, error: 'User not active. You may have been kicked or timed out.' }, { status: 401 });
     }
 
     // Check for timed out users
@@ -63,6 +57,7 @@ export async function GET(request: Request) {
           user: 'System',
           text: `${timedOutUser.username} has left (timed out).`,
           timestamp: now,
+          id: crypto.randomUUID()
         });
       });
     }

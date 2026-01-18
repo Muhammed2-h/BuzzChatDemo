@@ -210,8 +210,9 @@ export default function RoomPage() {
         if (!isActive) return;
 
         if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
           setIsAuthenticated(false);
-          setError('Session expired or passkey became invalid. Please re-join.');
+          setError(errData.error || 'Connection lost. Please re-join.');
           return; // Stop polling
         }
 
