@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rooms } from '@/lib/rooms';
+import { rooms, saveRooms, sanitizeId } from '@/lib/rooms';
 
 export async function POST(request: Request) {
     try {
@@ -9,7 +9,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: 'Missing required fields.' }, { status: 400 });
         }
 
-        const room = rooms[roomId];
+        const room = rooms[sanitizeId(roomId)];
 
         if (!room || room.passkey !== passkey) {
             return NextResponse.json({ success: false, error: 'Authentication failed.' }, { status: 403 });
@@ -101,6 +101,8 @@ export async function POST(request: Request) {
                 room.pinnedMessage = null;
             }
         }
+
+        saveRooms();
 
         return NextResponse.json({ success: true });
     } catch (error) {

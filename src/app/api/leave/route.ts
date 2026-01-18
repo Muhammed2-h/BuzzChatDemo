@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rooms } from '@/lib/rooms';
+import { rooms, saveRooms, sanitizeId } from '@/lib/rooms';
 
 export async function POST(request: Request) {
   try {
@@ -14,15 +14,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    const userIndex = rooms[roomId].users.findIndex(user => user.username === username);
+    const room = rooms[sanitizeId(roomId)];
+    const userIndex = room.users.findIndex(user => user.username === username);
     if (userIndex !== -1) {
-      rooms[roomId].users.splice(userIndex, 1);
-      rooms[roomId].messages.push({
-          user: 'System',
-          text: `${username} has left.`,
-          timestamp: Date.now()
+      room.users.splice(userIndex, 1);
+      room.messages.push({
+        user: 'System',
+        text: `${username} left the room.`,
+        timestamp: Date.now(),
       });
     }
+
+    saveRooms();
 
     return NextResponse.json({ success: true });
   } catch (error) {

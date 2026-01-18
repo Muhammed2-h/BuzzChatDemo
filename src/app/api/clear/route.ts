@@ -1,5 +1,6 @@
+
 import { NextResponse } from 'next/server';
-import { rooms } from '@/lib/rooms';
+import { rooms, type Message, saveRooms, sanitizeId } from '@/lib/rooms';
 
 export async function POST(request: Request) {
   try {
@@ -9,16 +10,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Room ID and passkey are required.' }, { status: 400 });
     }
 
-    if (!rooms[roomId] || rooms[roomId].passkey !== passkey) {
+    const sanitizedRoomId = sanitizeId(roomId);
+
+    if (!rooms[sanitizedRoomId] || rooms[sanitizedRoomId].passkey !== passkey) {
       return NextResponse.json({ success: false, error: 'Authentication failed. Invalid room or passkey.' }, { status: 403 });
     }
 
-    const clearMessage = {
-        user: 'System',
-        text: `Chat history cleared.`,
-        timestamp: Date.now()
+    const clearMessage: Message = {
+      user: 'System',
+      text: `Chat history cleared.`,
+      timestamp: Date.now()
     };
-    rooms[roomId].messages = [clearMessage];
+    rooms[sanitizedRoomId].messages = [clearMessage];
+    saveRooms();
 
     return NextResponse.json({ success: true, message: clearMessage });
   } catch (error) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rooms, type Message } from '@/lib/rooms';
+import { rooms, type Message, saveRooms, sanitizeId } from '@/lib/rooms';
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Message is too long.' }, { status: 400 });
     }
 
-    const room = rooms[roomId];
+    const room = rooms[sanitizeId(roomId)];
 
     if (!room || room.passkey !== passkey) {
       return NextResponse.json({ success: false, error: 'Authentication failed. Invalid room or passkey.' }, { status: 403 });
@@ -40,6 +40,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, message });
+
+    saveRooms();
   } catch (error) {
     console.error('[API/SEND] Error:', error);
     return NextResponse.json({ success: false, error: 'An unexpected server error occurred.' }, { status: 500 });

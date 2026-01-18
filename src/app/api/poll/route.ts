@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rooms } from '@/lib/rooms';
+import { rooms, sanitizeId } from '@/lib/rooms';
 
 const INACTIVE_TIMEOUT_MS = 30 * 1000; // 30 seconds
 
@@ -16,7 +16,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Room ID, passkey, and username are required.' }, { status: 400 });
     }
 
-    const room = rooms[roomId];
+    const room = rooms[sanitizeId(roomId)];
 
     if (!room || room.passkey !== passkey) {
       return NextResponse.json({ success: false, error: 'Authentication failed. Invalid room or passkey.' }, { status: 403 });
