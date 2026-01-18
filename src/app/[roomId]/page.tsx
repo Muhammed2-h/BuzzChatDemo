@@ -116,7 +116,7 @@ export default function RoomPage() {
           passkey,
           user: username,
           text: currentMessage,
-          text: currentMessage,
+
           replyTo: replyTo ? { user: replyTo.user, text: replyTo.text, id: replyTo.id } : undefined
         }),
       });
@@ -181,6 +181,18 @@ export default function RoomPage() {
       });
     } catch (err) {
       console.error('Failed to unpin message:', err);
+    }
+  };
+
+  const handleKick = async (targetUser: string) => {
+    try {
+      await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, passkey, adminUser: username, targetUser, action: 'kick' }),
+      });
+    } catch (err) {
+      console.error('Failed to kick user:', err);
     }
   };
 
@@ -456,6 +468,11 @@ export default function RoomPage() {
                     </span>
                     <span className="text-[10px] text-muted-foreground">Online</span>
                   </div>
+                  {u !== username && (
+                    <Button variant="ghost" size="icon" className="ml-auto h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleKick(u)} title="Kick User">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>

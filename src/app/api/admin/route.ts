@@ -32,22 +32,6 @@ export async function POST(request: Request) {
                     id: crypto.randomUUID()
                 });
             }
-        } else if (action === 'ban') {
-            if (targetIndex !== -1) {
-                room.users.splice(targetIndex, 1);
-            }
-
-            if (!room.bannedUsers) room.bannedUsers = [];
-            if (!room.bannedUsers.includes(targetUser)) {
-                room.bannedUsers.push(targetUser);
-            }
-
-            room.messages.push({
-                user: 'System',
-                text: `${adminUser} banned ${targetUser}.`,
-                timestamp: Date.now(),
-                id: crypto.randomUUID()
-            });
         }
 
         saveRooms();
