@@ -11,12 +11,17 @@ export interface Message {
     id?: string;
   };
   id: string;
+  isAnnouncement?: boolean;
+  editedAt?: number;
+  readBy?: string[];
+  mentions?: string[];
 }
 
 export interface User {
   username: string;
   lastSeen: number;
   isTyping?: boolean;
+  lastReadTimestamp?: number;
 }
 
 export interface Room {

@@ -3,7 +3,7 @@ import { rooms, type Message, saveRooms, sanitizeId } from '@/lib/rooms';
 
 export async function POST(request: Request) {
   try {
-    const { roomId, passkey, user, text, replyTo } = await request.json();
+    const { roomId, passkey, user, text, replyTo, isAnnouncement } = await request.json();
 
     if (!roomId || !passkey || !user || !text) {
       return NextResponse.json({ success: false, error: 'Missing required fields: roomId, passkey, user, and text.' }, { status: 400 });
@@ -25,12 +25,28 @@ export async function POST(request: Request) {
       sendingUser.lastSeen = Date.now();
     }
 
+    // Extract mentions from text
+    const mentionRegex = /@(\w+)/g;
+    const mentions: string[] = [];
+    let match;
+    while ((match = mentionRegex.exec(text)) !== null) {
+      mentions.push(match[1]);
+    }
+
+    // Check if user is creator for announcements
+    if (isAnnouncement && room.creator !== user) {
+      return NextResponse.json({ success: false, error: 'Only the room owner can send announcements.' }, { status: 403 });
+    }
+
     const message: Message = {
       id: crypto.randomUUID(),
       user,
       text,
       timestamp: Date.now(),
       replyTo: replyTo,
+      isAnnouncement: isAnnouncement || false,
+      mentions: mentions.length > 0 ? mentions : undefined,
+      readBy: [],
     };
 
     room.messages.push(message);
@@ -40,9 +56,8 @@ export async function POST(request: Request) {
       room.messages = room.messages.slice(-100);
     }
 
-    return NextResponse.json({ success: true, message });
-
     saveRooms();
+    return NextResponse.json({ success: true, message });
   } catch (error) {
     console.error('[API/SEND] Error:', error);
     return NextResponse.json({ success: false, error: 'An unexpected server error occurred.' }, { status: 500 });

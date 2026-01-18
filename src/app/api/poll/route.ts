@@ -29,13 +29,22 @@ export async function GET(request: Request) {
 
     const now = Date.now();
 
-    // Update current user's lastSeen timestamp
+    // Update current user's lastSeen timestamp and read receipts
     let userFound = false;
     room.users.forEach(user => {
       if (user.username === username) {
         user.lastSeen = now;
         user.isTyping = isTyping;
+        user.lastReadTimestamp = now;
         userFound = true;
+      }
+    });
+
+    // Mark messages as read by this user
+    room.messages.forEach(msg => {
+      if (!msg.readBy) msg.readBy = [];
+      if (!msg.readBy.includes(username) && msg.timestamp <= now) {
+        msg.readBy.push(username);
       }
     });
 

@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Bell, BellOff, Users, X, Reply, Pin, Trash2, ArrowLeft, MoreVertical, LogOut, Eraser } from 'lucide-react';
+import { Bell, BellOff, Users, X, Reply, Pin, Trash2, ArrowLeft, MoreVertical, LogOut, Eraser, Edit2, Megaphone, Check, CheckCheck, BarChart3 } from 'lucide-react';
 import type { Message } from '@/lib/rooms';
 
 export default function RoomPage() {
@@ -42,6 +42,11 @@ export default function RoomPage() {
 
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [creator, setCreator] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [isAnnouncementMode, setIsAnnouncementMode] = useState(false);
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState('');
+  const [showStats, setShowStats] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
@@ -110,20 +115,38 @@ export default function RoomPage() {
 
     setIsSending(true);
     try {
-      await fetch('/api/send', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomId,
-          passkey,
-          user: username,
-          text: currentMessage,
-
-          replyTo: replyTo ? { user: replyTo.user, text: replyTo.text, id: replyTo.id } : undefined
-        }),
-      });
+      if (editingMessage) {
+        // Edit existing message
+        await fetch('/api/edit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomId,
+            passkey,
+            username,
+            messageId: editingMessage.id,
+            newText: currentMessage,
+          }),
+        });
+        setEditingMessage(null);
+      } else {
+        // Send new message
+        await fetch('/api/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomId,
+            passkey,
+            user: username,
+            text: currentMessage,
+            replyTo: replyTo ? { user: replyTo.user, text: replyTo.text, id: replyTo.id } : undefined,
+            isAnnouncement: isAnnouncementMode,
+          }),
+        });
+      }
       setCurrentMessage('');
       setReplyTo(null);
+      setIsAnnouncementMode(false);
     } catch (err) {
       console.error('Failed to send message:', err);
     } finally {
