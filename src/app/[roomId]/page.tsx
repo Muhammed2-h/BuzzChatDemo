@@ -162,7 +162,7 @@ export default function RoomPage() {
       await fetch('/api/pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, passkey, message: msg, action: 'pin' }),
+        body: JSON.stringify({ roomId, passkey, message: msg, action: 'pin', username }),
       });
     } catch (err) {
       console.error('Failed to pin message:', err);
@@ -174,7 +174,7 @@ export default function RoomPage() {
       await fetch('/api/pin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, passkey, action: 'unpin' }),
+        body: JSON.stringify({ roomId, passkey, action: 'unpin', username }),
       });
     } catch (err) {
       console.error('Failed to unpin message:', err);

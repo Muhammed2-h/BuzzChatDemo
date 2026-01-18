@@ -3,9 +3,9 @@ import { rooms } from '@/lib/rooms';
 
 export async function POST(request: Request) {
     try {
-        const { roomId, passkey, message, action } = await request.json();
+        const { roomId, passkey, message, action, username } = await request.json();
 
-        if (!roomId || !passkey || !action) {
+        if (!roomId || !passkey || !action || !username) {
             return NextResponse.json({ success: false, error: 'Missing required fields.' }, { status: 400 });
         }
 
@@ -20,17 +20,24 @@ export async function POST(request: Request) {
                 return NextResponse.json({ success: false, error: 'Message required to pin.' }, { status: 400 });
             }
             room.pinnedMessage = message;
-            // Notify via system message
+            room.pinnedBy = username;
+
             room.messages.push({
                 user: 'System',
-                text: `A message has been pinned.`,
+                text: `${username} pinned a message.`,
                 timestamp: Date.now()
             });
         } else if (action === 'unpin') {
+            if (room.pinnedBy && room.pinnedBy !== username) {
+                return NextResponse.json({ success: false, error: 'Only the user who pinned this message can unpin it.' }, { status: 403 });
+            }
+
             room.pinnedMessage = null;
+            room.pinnedBy = null;
+
             room.messages.push({
                 user: 'System',
-                text: `Message unpinned.`,
+                text: `${username} unpinned the message.`,
                 timestamp: Date.now()
             });
         }

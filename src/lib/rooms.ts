@@ -18,6 +18,7 @@ export interface Room {
   messages: Message[];
   users: User[];
   pinnedMessage?: Message | null;
+  pinnedBy?: string | null;
 }
 
 // In-memory store for rooms, will be cleared on server restart.
