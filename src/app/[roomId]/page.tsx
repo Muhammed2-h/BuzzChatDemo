@@ -592,12 +592,15 @@ export default function RoomPage() {
                       </div>
                     )}
                     <p className="text-sm leading-relaxed break-words">{renderTextWithMentions(msg.text)}</p>
-                    {msg.readBy && msg.readBy.length > 0 && msg.user === username && (
-                      <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                        {msg.readBy.length === 1 ? <Check className="h-3 w-3" /> : <CheckCheck className="h-3 w-3 text-blue-500" />}
-                        <span className="text-[10px]">
-                          {msg.readBy.length === onlineUsers.length - 1 ? 'Read by all' : `Read by ${msg.readBy.length}`}
-                        </span>
+                    {msg.user === username && (
+                      <div className="flex items-center gap-1 mt-1">
+                        {!msg.readBy || msg.readBy.length === 0 ? (
+                          <Check className="h-3 w-3 text-muted-foreground" />
+                        ) : msg.readBy.length === 1 ? (
+                          <Check className="h-3 w-3 text-blue-500" />
+                        ) : (
+                          <CheckCheck className="h-3 w-3 text-blue-500" />
+                        )}
                       </div>
                     )}
                   </div>
