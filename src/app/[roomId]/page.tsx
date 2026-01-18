@@ -345,46 +345,58 @@ export default function RoomPage() {
       <main className="flex-1 flex overflow-hidden relative">
         <div className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-6">
-            {messages.map((msg, index) => (
-              <div key={index} className="flex items-start gap-4 group">
-                <Avatar className="w-10 h-10 border shrink-0">
-                  <AvatarFallback className="bg-secondary text-secondary-foreground">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-semibold truncate">{msg.user}</span>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(msg.timestamp).toLocaleTimeString()}
+            {messages.map((msg, index) => {
+              if (msg.user === 'System') {
+                return (
+                  <div key={index} className="flex justify-center my-2">
+                    <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
+                      {msg.text}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => setReplyTo(msg)}
-                      title="Reply"
-                    >
-                      <Reply className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handlePin(msg)}
-                      title="Pin Message"
-                    >
-                      <Pin className="h-3 w-3" />
-                    </Button>
                   </div>
-                  {(msg as any).replyTo && (
-                    <div className="text-xs text-muted-foreground border-l-2 pl-2 mb-1 opacity-80">
-                      <span className="font-semibold">@{(msg as any).replyTo.user}: </span>
-                      {(msg as any).replyTo.text.substring(0, 50)}{(msg as any).replyTo.text.length > 50 ? '...' : ''}
+                );
+              }
+
+              return (
+                <div key={index} className="flex items-start gap-4 group">
+                  <Avatar className="w-10 h-10 border shrink-0">
+                    <AvatarFallback className="bg-secondary text-secondary-foreground">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-semibold truncate">{msg.user}</span>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(msg.timestamp).toLocaleTimeString()}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setReplyTo(msg)}
+                        title="Reply"
+                      >
+                        <Reply className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handlePin(msg)}
+                        title="Pin Message"
+                      >
+                        <Pin className="h-3 w-3" />
+                      </Button>
                     </div>
-                  )}
-                  <p className="text-sm leading-relaxed break-words">{msg.text}</p>
+                    {(msg as any).replyTo && (
+                      <div className="text-xs text-muted-foreground border-l-2 pl-2 mb-1 opacity-80">
+                        <span className="font-semibold">@{(msg as any).replyTo.user}: </span>
+                        {(msg as any).replyTo.text.substring(0, 50)}{(msg as any).replyTo.text.length > 50 ? '...' : ''}
+                      </div>
+                    )}
+                    <p className="text-sm leading-relaxed break-words">{msg.text}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {messages.length === 0 && (
               <div className="text-center text-muted-foreground py-10">No messages yet. Say hello!</div>
             )}
