@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const passkey = searchParams.get('passkey');
     const since = searchParams.get('since');
     const username = searchParams.get('username');
+    const isTyping = searchParams.get('isTyping') === 'true';
 
     if (!roomId || !passkey || !username) {
       return NextResponse.json({ success: false, error: 'Room ID, passkey, and username are required.' }, { status: 400 });
@@ -33,14 +34,14 @@ export async function GET(request: Request) {
     room.users.forEach(user => {
       if (user.username === username) {
         user.lastSeen = now;
+        user.isTyping = isTyping;
         userFound = true;
       }
     });
 
     // If user is polling but not in the list, add them. This can happen on server restart or if they were timed out incorrectly.
     if (!userFound) {
-      room.users.push({ username, lastSeen: now });
-      room.users.push({ username, lastSeen: now });
+      room.users.push({ username, lastSeen: now, isTyping });
       // Suppress "reconnected" message to avoid spam on network blips
       /* 
       room.messages.push({
@@ -74,6 +75,7 @@ export async function GET(request: Request) {
       success: true,
       messages: newMessages,
       users: room.users.map(u => u.username),
+      typingUsers: room.users.filter(u => u.isTyping && u.username !== username).map(u => u.username),
       pinnedMessage: room.pinnedMessage
     });
   } catch (error) {

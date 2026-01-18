@@ -38,6 +38,7 @@ export default function RoomPage() {
   const [showUserList, setShowUserList] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [pinnedMessage, setPinnedMessage] = useState<Message | null>(null);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
@@ -189,7 +190,8 @@ export default function RoomPage() {
 
     const pollMessages = async () => {
       try {
-        const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}`);
+        const isTyping = currentMessage.length > 0;
+        const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}&isTyping=${isTyping}`);
 
         if (!isActive) return;
 
@@ -220,6 +222,9 @@ export default function RoomPage() {
           if (data.users) {
             setOnlineUsers(data.users);
           }
+          if (data.typingUsers) {
+            setTypingUsers(data.typingUsers);
+          }
           setPinnedMessage(data.pinnedMessage || null);
         }
       } catch (error) {
@@ -239,7 +244,7 @@ export default function RoomPage() {
       isActive = false;
       clearTimeout(timeoutId);
     };
-  }, [isAuthenticated, roomId, passkey, username]);
+  }, [isAuthenticated, roomId, passkey, username, currentMessage]);
 
   if (!isAuthenticated) {
     return (
@@ -454,7 +459,12 @@ export default function RoomPage() {
             </Button>
           </div>
         )}
-        <form onSubmit={handleSend} className="flex gap-2">
+        <form onSubmit={handleSend} className="flex gap-2 relative">
+          {typingUsers.length > 0 && (
+            <div className="absolute -top-6 left-0 text-xs text-muted-foreground animate-pulse">
+              {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+            </div>
+          )}
           <Input
             placeholder="Type a message..."
             value={currentMessage}

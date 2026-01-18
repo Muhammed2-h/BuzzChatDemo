@@ -11,6 +11,7 @@ export interface Message {
 export interface User {
   username: string;
   lastSeen: number;
+  isTyping?: boolean;
 }
 
 export interface Room {
