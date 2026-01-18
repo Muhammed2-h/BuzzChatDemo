@@ -19,7 +19,8 @@ export async function POST(request: Request) {
     const clearMessage: Message = {
       user: 'System',
       text: `Chat history cleared.`,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      id: crypto.randomUUID()
     };
     rooms[sanitizedRoomId].messages = [clearMessage];
     saveRooms();

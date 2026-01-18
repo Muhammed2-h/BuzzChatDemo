@@ -22,6 +22,7 @@ export async function POST(request: Request) {
         user: 'System',
         text: `${username} left the room.`,
         timestamp: Date.now(),
+        id: crypto.randomUUID()
       });
     }
 

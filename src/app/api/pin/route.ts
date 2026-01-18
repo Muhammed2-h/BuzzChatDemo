@@ -47,7 +47,8 @@ export async function POST(request: Request) {
                     room.messages.push({
                         user: 'System',
                         text: `${username} removed their pin.`,
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        id: crypto.randomUUID()
                     });
 
                     // If NO ONE is pinning it anymore, clear the message entirely
@@ -56,7 +57,8 @@ export async function POST(request: Request) {
                         room.messages.push({
                             user: 'System',
                             text: `Message unpinned (no more pinners).`,
-                            timestamp: Date.now()
+                            timestamp: Date.now(),
+                            id: crypto.randomUUID()
                         });
                     }
                 } else {
@@ -65,7 +67,8 @@ export async function POST(request: Request) {
                     room.messages.push({
                         user: 'System',
                         text: `${username} also pinned the message.`,
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        id: crypto.randomUUID()
                     });
                 }
             } else {
@@ -78,7 +81,8 @@ export async function POST(request: Request) {
                 room.messages.push({
                     user: 'System',
                     text: `${username} pinned a new message.`,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    id: crypto.randomUUID()
                 });
             }
 
@@ -94,7 +98,8 @@ export async function POST(request: Request) {
             room.messages.push({
                 user: 'System',
                 text: `${username} unpinned the message.`,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                id: crypto.randomUUID()
             });
 
             if (room.pinnedBy.length === 0) {

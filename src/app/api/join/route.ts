@@ -25,7 +25,8 @@ export async function POST(request: Request) {
         messages: [{
           user: 'System',
           text: `Room '${sanitizedRoomId}' created.`,
-          timestamp: now
+          timestamp: now,
+          id: crypto.randomUUID()
         }],
         users: [], // users will be added right after
       };
@@ -36,6 +37,10 @@ export async function POST(request: Request) {
     // Room exists, validate the provided passkey.
     if (room.passkey !== passkey) {
       return NextResponse.json({ success: false, error: 'Invalid passkey.' }, { status: 403 });
+    }
+
+    if (room.bannedUsers && room.bannedUsers.includes(username)) {
+      return NextResponse.json({ success: false, error: 'You have been banned from this room.' }, { status: 403 });
     }
 
     // Clean up inactive users before checking for duplicates
@@ -52,7 +57,8 @@ export async function POST(request: Request) {
     room.messages.push({
       user: 'System',
       text: `${username} has joined.`,
-      timestamp: now
+      timestamp: now,
+      id: crypto.randomUUID()
     });
 
     saveRooms();
