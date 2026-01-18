@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Bell, BellOff, Users, X, Reply, Pin, Trash2, ArrowLeft } from 'lucide-react';
+import { Bell, BellOff, Users, X, Reply, Pin, Trash2, ArrowLeft, MoreVertical, LogOut, Eraser } from 'lucide-react';
 import type { Message } from '@/lib/rooms';
 
 export default function RoomPage() {
@@ -341,27 +341,31 @@ export default function RoomPage() {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden fixed inset-0">
-      <header className="p-4 border-b shrink-0 flex justify-between items-start bg-background/95 backdrop-blur z-10">
-        <div>
-          <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
-          <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
-
-          <p className="text-xs text-muted-foreground mt-2 font-mono bg-muted p-1 rounded-md inline-block">Passkey: {passkey}</p>
+      <header className="p-3 sm:p-4 border-b shrink-0 flex justify-between items-center bg-background/95 backdrop-blur z-10">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-xl font-bold font-headline truncate max-w-[150px] sm:max-w-none">Room: {roomId}</h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-[10px] sm:text-xs text-muted-foreground truncate">User: {username}</span>
+            <span className="text-[10px] text-muted-foreground/40 border-l pl-2 hidden sm:inline">Passkey: {passkey}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="h-9 w-9">
-            {isSoundEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <Button variant="ghost" size="icon" onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="h-8 w-8 sm:h-9 sm:w-9">
+            {isSoundEnabled ? <Bell className="h-4 w-4 sm:h-5 sm:w-5" /> : <BellOff className="h-4 w-4 sm:h-5 sm:w-5" />}
             <span className="sr-only">Toggle sound</span>
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setShowUserList(!showUserList)} className="h-9 w-9 relative">
-            <Users className="h-5 w-5" />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
+          <Button variant="ghost" size="icon" onClick={() => setShowUserList(!showUserList)} className="h-8 w-8 sm:h-9 sm:w-9 relative">
+            <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[9px] text-primary-foreground font-bold leading-none">
               {onlineUsers.length}
             </span>
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive">Clear Chat</Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 text-destructive" title="Clear Chat">
+                <Eraser className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline ml-2">Clear</span>
+              </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -376,10 +380,13 @@ export default function RoomPage() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
+          <Button variant="ghost" size="icon" onClick={handleDisconnect} className="h-8 w-8 sm:h-9 sm:w-9" title="Disconnect">
+            <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="hidden sm:inline ml-2">Leave</span>
+          </Button>
           {creator === username && (
-            <Button variant="destructive" onClick={handleDeleteRoom} title="Delete Room Permanently">
-              <Trash2 className="h-4 w-4" />
+            <Button variant="destructive" size="icon" onClick={handleDeleteRoom} className="h-8 w-8 sm:h-9 sm:w-9" title="Delete Room Permanently">
+              <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className="sr-only">Delete Room</span>
             </Button>
           )}
@@ -404,8 +411,8 @@ export default function RoomPage() {
       )}
 
       <main className="flex-1 flex overflow-hidden relative">
-        <div className="flex-1 p-4 overflow-y-auto">
-          <div className="space-y-6">
+        <div className="flex-1 p-2 sm:p-4 overflow-y-auto">
+          <div className="space-y-4 sm:space-y-6">
             {messages.map((msg, index) => {
               if (msg.user === 'System') {
                 return (
@@ -418,9 +425,9 @@ export default function RoomPage() {
               }
 
               return (
-                <div key={index} id={msg.id} className="flex items-start gap-4 group">
-                  <Avatar className="w-10 h-10 border shrink-0">
-                    <AvatarFallback className="bg-secondary text-secondary-foreground">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
+                <div key={index} id={msg.id} className="flex items-start gap-2 sm:gap-4 group">
+                  <Avatar className="w-8 h-8 sm:w-10 sm:h-10 border shrink-0">
+                    <AvatarFallback className="bg-secondary text-secondary-foreground text-xs sm:text-sm">{msg.user.substring(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
@@ -522,7 +529,7 @@ export default function RoomPage() {
         )}
       </main>
 
-      <footer className="p-4 border-t shrink-0 bg-background">
+      <footer className="p-2 sm:p-4 border-t shrink-0 bg-background">
         {replyTo && (
           <div className="flex items-center justify-between bg-muted/50 p-2 rounded-t-md text-sm border-x border-t mx-1">
             <div className="flex items-center gap-2 truncate">
