@@ -34,6 +34,9 @@ export async function POST(request: Request) {
     }
 
     const room = rooms[sanitizedRoomId];
+    if (!room.creator) {
+      room.creator = username;
+    }
 
     // Room exists, validate the provided passkey.
     if (room.passkey !== passkey) {

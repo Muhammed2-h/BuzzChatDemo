@@ -507,7 +507,7 @@ export default function RoomPage() {
                       {creator === u ? <span className="text-yellow-600 font-semibold">👑 Owner</span> : 'Online'}
                     </span>
                   </div>
-                  {u !== username && (
+                  {u !== username && u !== creator && (
                     <Button variant="ghost" size="icon" className="ml-auto h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleKick(u)} title="Kick User">
                       <X className="h-4 w-4" />
                     </Button>
