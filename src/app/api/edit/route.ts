@@ -19,6 +19,7 @@ export async function POST(request: Request) {
         const message = room.messages.find(m => m.id === messageId);
 
         if (!message) {
+            console.error('[API/EDIT] Message not found. MessageId:', messageId, 'Available IDs:', room.messages.map(m => m.id));
             return NextResponse.json({ success: false, error: 'Message not found.' }, { status: 404 });
         }
 
@@ -27,11 +28,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, error: 'You can only edit your own messages.' }, { status: 403 });
         }
 
+        console.log('[API/EDIT] Editing message:', messageId, 'Old text:', message.text, 'New text:', newText);
+
         // Update the message
         message.text = newText;
         message.editedAt = Date.now();
 
         saveRooms();
+        console.log('[API/EDIT] Message edited successfully');
         return NextResponse.json({ success: true });
 
     } catch (error) {

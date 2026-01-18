@@ -117,7 +117,7 @@ export default function RoomPage() {
     try {
       if (editingMessage) {
         // Edit existing message
-        await fetch('/api/edit', {
+        const res = await fetch('/api/edit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -128,6 +128,12 @@ export default function RoomPage() {
             newText: currentMessage,
           }),
         });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          console.error('Edit failed:', data.error);
+          alert('Failed to edit message: ' + (data.error || 'Unknown error'));
+          return;
+        }
         setEditingMessage(null);
       } else {
         // Send new message
