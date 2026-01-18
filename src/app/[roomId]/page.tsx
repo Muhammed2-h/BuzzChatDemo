@@ -298,6 +298,9 @@ export default function RoomPage() {
       const data = await res.json();
       if (!res.ok || !data.success) {
         alert('Failed to delete announcement: ' + (data.error || 'Unknown error'));
+      } else {
+        // Immediately remove from local state for instant UI update
+        setMessages(prev => prev.filter(msg => msg.id !== messageId));
       }
     } catch (err) {
       console.error('Failed to delete announcement:', err);
