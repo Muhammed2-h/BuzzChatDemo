@@ -313,8 +313,8 @@ export default function RoomPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="p-4 border-b shrink-0 flex justify-between items-start bg-background/95 backdrop-blur sticky top-0 z-10">
+    <div className="flex flex-col h-[100dvh] bg-background text-foreground overflow-hidden fixed inset-0">
+      <header className="p-4 border-b shrink-0 flex justify-between items-start bg-background/95 backdrop-blur z-10">
         <div>
           <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
           <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
@@ -447,7 +447,7 @@ export default function RoomPage() {
 
         {/* Active User Sidebar */}
         {showUserList && (
-          <div className="w-72 border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 overflow-y-auto absolute inset-y-0 right-0 z-20 shadow-xl transition-all duration-300 ease-in-out flex flex-col">
+          <div className="w-full sm:w-72 border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 overflow-y-auto absolute inset-y-0 right-0 z-20 shadow-xl transition-all duration-300 ease-in-out flex flex-col">
             <div className="flex justify-between items-center mb-6 pb-4 border-b">
               <div>
                 <h2 className="font-bold text-lg">Active Users</h2>
