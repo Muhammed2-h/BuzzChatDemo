@@ -116,6 +116,7 @@ export default function RoomPage() {
     setIsSending(true);
     try {
       if (editingMessage) {
+        console.log('[EDIT] Sending edit request for message:', editingMessage.id, 'New text:', currentMessage);
         // Edit existing message
         const res = await fetch('/api/edit', {
           method: 'POST',
@@ -129,11 +130,13 @@ export default function RoomPage() {
           }),
         });
         const data = await res.json();
+        console.log('[EDIT] Response:', data);
         if (!res.ok || !data.success) {
           console.error('Edit failed:', data.error);
           alert('Failed to edit message: ' + (data.error || 'Unknown error'));
           return;
         }
+        console.log('[EDIT] Edit successful, clearing edit mode');
         setEditingMessage(null);
       } else {
         // Send new message
@@ -273,6 +276,7 @@ export default function RoomPage() {
   };
 
   const handleEditMessage = (msg: Message) => {
+    console.log('[EDIT] Starting edit for message:', msg.id, 'Text:', msg.text);
     setEditingMessage(msg);
     setCurrentMessage(msg.text);
     setReplyTo(null);
