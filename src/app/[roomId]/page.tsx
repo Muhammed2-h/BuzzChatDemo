@@ -108,12 +108,12 @@ export default function RoomPage() {
       await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          roomId, 
-          passkey, 
-          user: username, 
+        body: JSON.stringify({
+          roomId,
+          passkey,
+          user: username,
           text: currentMessage,
-          replyTo: replyTo ? { user: replyTo.user, text: replyTo.text } : undefined 
+          replyTo: replyTo ? { user: replyTo.user, text: replyTo.text } : undefined
         }),
       });
       setCurrentMessage('');
@@ -133,9 +133,9 @@ export default function RoomPage() {
         body: JSON.stringify({ roomId, passkey, username }),
       });
     } catch (err) {
-        console.error('Failed to notify server of disconnection:', err);
+      console.error('Failed to notify server of disconnection:', err);
     } finally {
-        router.push('/');
+      router.push('/');
     }
   };
 
@@ -163,57 +163,57 @@ export default function RoomPage() {
     let timeoutId: NodeJS.Timeout;
 
     const pollMessages = async () => {
-        try {
-            const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}`);
-            
-            if (!isActive) return;
+      try {
+        const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}`);
 
-            if (!res.ok) {
-                setIsAuthenticated(false);
-                setError('Session expired or passkey became invalid. Please re-join.');
-                return; // Stop polling
-            }
+        if (!isActive) return;
 
-            const data = await res.json();
-            if (data.success) {
-                const receivedMessages: Message[] = data.messages;
-                if (receivedMessages.length > 0) {
-                    const hasNewMessageFromOthers = receivedMessages.some(msg => msg.user !== username && msg.user !== 'System');
-                    if (hasNewMessageFromOthers) {
-                        playNotificationSound();
-                    }
-                    
-                    setMessages(prev => {
-                        const combined = [...prev, ...receivedMessages];
-                        const uniqueMessages = Array.from(new Map(combined.map(m => [m.timestamp, m])).values());
-                        return uniqueMessages.sort((a, b) => a.timestamp - b.timestamp);
-                    });
-                    
-                    const sortedReceived = [...receivedMessages].sort((a, b) => a.timestamp - b.timestamp);
-                    lastMessageTimestamp.current = sortedReceived[sortedReceived.length - 1].timestamp;
-                }
-                if (data.users) {
-                    setOnlineUsers(data.users);
-                }
-            }
-        } catch (error) {
-            if (isActive) {
-                console.error('Polling error:', error);
-            }
-        } finally {
-            if (isActive) {
-                timeoutId = setTimeout(pollMessages, 2000);
-            }
+        if (!res.ok) {
+          setIsAuthenticated(false);
+          setError('Session expired or passkey became invalid. Please re-join.');
+          return; // Stop polling
         }
+
+        const data = await res.json();
+        if (data.success) {
+          const receivedMessages: Message[] = data.messages;
+          if (receivedMessages.length > 0) {
+            const hasNewMessageFromOthers = receivedMessages.some(msg => msg.user !== username && msg.user !== 'System');
+            if (hasNewMessageFromOthers) {
+              playNotificationSound();
+            }
+
+            setMessages(prev => {
+              const combined = [...prev, ...receivedMessages];
+              const uniqueMessages = Array.from(new Map(combined.map(m => [m.timestamp, m])).values());
+              return uniqueMessages.sort((a, b) => a.timestamp - b.timestamp);
+            });
+
+            const sortedReceived = [...receivedMessages].sort((a, b) => a.timestamp - b.timestamp);
+            lastMessageTimestamp.current = sortedReceived[sortedReceived.length - 1].timestamp;
+          }
+          if (data.users) {
+            setOnlineUsers(data.users);
+          }
+        }
+      } catch (error) {
+        if (isActive) {
+          console.error('Polling error:', error);
+        }
+      } finally {
+        if (isActive) {
+          timeoutId = setTimeout(pollMessages, 2000);
+        }
+      }
     };
 
     pollMessages();
 
     return () => {
-        isActive = false;
-        clearTimeout(timeoutId);
+      isActive = false;
+      clearTimeout(timeoutId);
     };
-}, [isAuthenticated, roomId, passkey, username]);
+  }, [isAuthenticated, roomId, passkey, username]);
 
   if (!isAuthenticated) {
     return (
@@ -265,37 +265,37 @@ export default function RoomPage() {
         <div>
           <h1 className="text-xl font-bold font-headline">Room: {roomId}</h1>
           <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
-          <p className="text-sm text-muted-foreground mt-1">Online: {onlineUsers.join(', ')}</p>
+          <p className="text-sm text-muted-foreground">Welcome, {username}!</p>
           <p className="text-xs text-muted-foreground mt-2 font-mono bg-muted p-1 rounded-md inline-block">Passkey: {passkey}</p>
         </div>
         <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="h-9 w-9">
-                {isSoundEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-                <span className="sr-only">Toggle sound</span>
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => setShowUserList(!showUserList)} className="h-9 w-9 relative">
-                <Users className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
-                  {onlineUsers.length}
-                </span>
-            </Button>
+          <Button variant="ghost" size="icon" onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="h-9 w-9">
+            {isSoundEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+            <span className="sr-only">Toggle sound</span>
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setShowUserList(!showUserList)} className="h-9 w-9 relative">
+            <Users className="h-5 w-5" />
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
+              {onlineUsers.length}
+            </span>
+          </Button>
           <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">Clear Chat</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action will permanently clear the chat history for this room. This cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleClearChat} className={buttonVariants({ variant: "destructive" })}>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">Clear Chat</Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action will permanently clear the chat history for this room. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleClearChat} className={buttonVariants({ variant: "destructive" })}>Continue</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button variant="outline" onClick={handleDisconnect}>Disconnect</Button>
         </div>
       </header>
@@ -314,9 +314,9 @@ export default function RoomPage() {
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
                       {new Date(msg.timestamp).toLocaleTimeString()}
                     </span>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                       onClick={() => setReplyTo(msg)}
                       title="Reply"
@@ -335,30 +335,46 @@ export default function RoomPage() {
               </div>
             ))}
             {messages.length === 0 && (
-               <div className="text-center text-muted-foreground py-10">No messages yet. Say hello!</div>
+              <div className="text-center text-muted-foreground py-10">No messages yet. Say hello!</div>
             )}
             <div ref={messagesEndRef} />
           </div>
         </div>
-        
+
         {/* Active User Sidebar */}
         {showUserList && (
-           <div className="w-64 border-l bg-background p-4 overflow-y-auto absolute inset-y-0 right-0 z-20 shadow-lg md:relative md:shadow-none transition-all duration-300 ease-in-out">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-semibold">Active Users ({onlineUsers.length})</h2>
-                <Button variant="ghost" size="icon" className="h-8 w-8 md:hidden" onClick={() => setShowUserList(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
+          <div className="w-72 border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 overflow-y-auto absolute inset-y-0 right-0 z-20 shadow-xl transition-all duration-300 ease-in-out flex flex-col">
+            <div className="flex justify-between items-center mb-6 pb-4 border-b">
+              <div>
+                <h2 className="font-bold text-lg">Active Users</h2>
+                <p className="text-xs text-muted-foreground">{onlineUsers.length} online</p>
               </div>
-              <ul className="space-y-2">
-                {onlineUsers.map((u) => (
-                  <li key={u} className="flex items-center gap-2 text-sm p-2 rounded hover:bg-muted/50">
-                    <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className={u === username ? "font-bold" : ""}>{u} {u === username && "(You)"}</span>
-                  </li>
-                ))}
-              </ul>
-           </div>
+              <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setShowUserList(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <ul className="space-y-3 flex-1">
+              {onlineUsers.map((u) => (
+                <li key={u} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
+                  <div className="relative">
+                    <Avatar className="h-8 w-8 border bg-muted">
+                      <AvatarFallback className="text-xs font-bold">{u.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-background"></span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className={`text-sm font-medium ${u === username ? "text-primary" : ""}`}>
+                      {u} {u === username && "(You)"}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">Online</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-auto pt-4 border-t text-center text-xs text-muted-foreground">
+              <p>Passkey: <span className="font-mono bg-muted px-1 rounded">{passkey}</span></p>
+            </div>
+          </div>
         )}
       </main>
 
