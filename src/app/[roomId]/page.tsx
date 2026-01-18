@@ -287,6 +287,23 @@ export default function RoomPage() {
     setCurrentMessage('');
   };
 
+  const handleDeleteAnnouncement = async (messageId: string) => {
+    if (!confirm('Are you sure you want to delete this announcement?')) return;
+    try {
+      const res = await fetch('/api/delete-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, passkey, username, messageId }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert('Failed to delete announcement: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Failed to delete announcement:', err);
+    }
+  };
+
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -520,6 +537,17 @@ export default function RoomPage() {
                         <Megaphone className="h-5 w-5 text-yellow-600" />
                         <span className="font-bold text-yellow-700">Announcement from {msg.user}</span>
                         <span className="text-xs text-muted-foreground ml-auto">{new Date(msg.timestamp).toLocaleTimeString()}</span>
+                        {creator === username && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteAnnouncement(msg.id)}
+                            title="Delete Announcement"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                       <p className="text-sm font-medium">{msg.text}</p>
                     </div>
