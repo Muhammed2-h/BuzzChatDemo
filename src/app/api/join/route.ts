@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { rooms, saveRooms, sanitizeId } from '@/lib/rooms';
 
-const INACTIVE_TIMEOUT_MS = 30 * 1000; // 30 seconds
+const INACTIVE_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function POST(request: Request) {
   try {
