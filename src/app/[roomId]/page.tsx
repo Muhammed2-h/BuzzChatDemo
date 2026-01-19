@@ -339,6 +339,12 @@ export default function RoomPage() {
         if (!isActive) return;
 
         if (!res.ok) {
+          if (res.status === 410) {
+            alert('Room has been deleted by the owner.');
+            router.push('/');
+            return;
+          }
+
           if (res.status === 403 || res.status === 401) {
             // Stop if we are intentionally deleting the room
             if (isDeleting.current) return;

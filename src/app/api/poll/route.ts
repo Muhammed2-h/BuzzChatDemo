@@ -18,6 +18,10 @@ export async function GET(request: Request) {
 
     const room = rooms[sanitizeId(roomId)];
 
+    if (room && room.isDeleted) {
+      return NextResponse.json({ success: false, error: 'Room has been deleted.' }, { status: 410 });
+    }
+
     if (!room || room.passkey !== passkey) {
       return NextResponse.json({ success: false, error: 'Authentication failed. Invalid room or passkey.' }, { status: 403 });
     }

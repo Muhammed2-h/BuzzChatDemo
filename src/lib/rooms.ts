@@ -32,6 +32,7 @@ export interface Room {
   pinnedBy?: string[];
   bannedUsers?: string[];
   creator?: string;
+  isDeleted?: boolean;
 }
 
 // Helper to sanitize Room IDs consistently

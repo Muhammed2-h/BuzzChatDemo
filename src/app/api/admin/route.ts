@@ -39,8 +39,20 @@ export async function POST(request: Request) {
             if (room.creator !== adminUser) {
                 return NextResponse.json({ success: false, error: 'Only the room creator can delete the room.' }, { status: 403 });
             }
-            delete rooms[sanitizeId(roomId)];
+            // Soft delete: Mark as deleted so other users polling get a 410 Gone.
+            room.isDeleted = true;
+            room.users = []; // Remove all users immediately
             saveRooms();
+
+            // Hard delete after 30 seconds to allow time for polls to catch the 410
+            setTimeout(() => {
+                const id = sanitizeId(roomId);
+                if (rooms[id] && rooms[id].isDeleted) {
+                    delete rooms[id];
+                    saveRooms();
+                }
+            }, 30000);
+
             return NextResponse.json({ success: true, message: 'Room deleted.' });
         }
 
