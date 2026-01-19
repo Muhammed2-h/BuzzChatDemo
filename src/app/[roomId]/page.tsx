@@ -47,6 +47,7 @@ export default function RoomPage() {
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
   const [showStats, setShowStats] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
@@ -659,12 +660,12 @@ export default function RoomPage() {
         {showUserList && (
           <div className="w-full sm:w-72 border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 overflow-y-auto absolute inset-y-0 right-0 z-20 shadow-xl transition-all duration-300 ease-in-out flex flex-col">
             <div className="flex justify-between items-center mb-4 pb-4 border-b">
-              <div className="flex gap-2">
+              <div className="flex gap-1">
                 <Button
-                  variant={!showStats ? "default" : "ghost"}
+                  variant={!showStats && !showLogs ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setShowStats(false)}
-                  className="h-8"
+                  onClick={() => { setShowStats(false); setShowLogs(false); }}
+                  className="h-8 text-xs"
                 >
                   <Users className="h-4 w-4 mr-1" />
                   Users
@@ -672,11 +673,20 @@ export default function RoomPage() {
                 <Button
                   variant={showStats ? "default" : "ghost"}
                   size="sm"
-                  onClick={() => setShowStats(true)}
-                  className="h-8"
+                  onClick={() => { setShowStats(true); setShowLogs(false); }}
+                  className="h-8 text-xs"
                 >
                   <BarChart3 className="h-4 w-4 mr-1" />
                   Stats
+                </Button>
+                <Button
+                  variant={showLogs ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => { setShowStats(false); setShowLogs(true); }}
+                  className="h-8 text-xs"
+                >
+                  <BarChart3 className="h-4 w-4 mr-1" />
+                  Logs
                 </Button>
               </div>
               <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted" onClick={() => setShowUserList(false)}>
@@ -684,7 +694,7 @@ export default function RoomPage() {
               </Button>
             </div>
 
-            {!showStats ? (
+            {!showStats && !showLogs ? (
               <>
                 <ul className="space-y-3 flex-1">
                   {onlineUsers.map((u) => (
@@ -715,7 +725,7 @@ export default function RoomPage() {
                   <p>Passkey: <span className="font-mono bg-muted px-1 rounded">{passkey}</span></p>
                 </div>
               </>
-            ) : (
+            ) : showStats ? (
               <div className="flex-1 overflow-y-auto space-y-4">
                 <div className="bg-muted/50 p-4 rounded-lg">
                   <h3 className="font-semibold mb-2 flex items-center gap-2">
@@ -725,7 +735,7 @@ export default function RoomPage() {
                   <div className="space-y-3 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Total Messages:</span>
-                      <span className="font-semibold">{messages.length}</span>
+                      <span className="font-semibold">{messages.filter(m => m.user !== 'System').length}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Active Users:</span>
@@ -742,7 +752,7 @@ export default function RoomPage() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Most Active:</span>
                       <span className="font-semibold">
-                        {messages.length > 0
+                        {messages.filter(m => m.user !== 'System').length > 0
                           ? Object.entries(
                             messages.reduce((acc: Record<string, number>, msg) => {
                               if (msg.user !== 'System') {
@@ -757,7 +767,29 @@ export default function RoomPage() {
                   </div>
                 </div>
               </div>
-            )}
+            ) : showLogs ? (
+              <div className="flex-1 overflow-y-auto space-y-2">
+                <div className="space-y-2">
+                  {messages
+                    .filter(msg => msg.user === 'System')
+                    .map((msg, index) => (
+                      <div key={index} className="bg-muted/30 p-3 rounded-lg border border-muted">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs text-muted-foreground flex-1">{msg.text}</p>
+                          <span className="text-[10px] text-muted-foreground/60 whitespace-nowrap">
+                            {new Date(msg.timestamp).toLocaleTimeString()}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  {messages.filter(msg => msg.user === 'System').length === 0 && (
+                    <div className="text-center text-muted-foreground text-sm py-10">
+                      No system logs yet
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </div>
         )}
       </main>
