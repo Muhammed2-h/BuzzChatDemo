@@ -51,6 +51,7 @@ export default function RoomPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
+  const isDeleting = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -251,6 +252,7 @@ export default function RoomPage() {
 
   const handleDeleteRoom = async () => {
     if (!confirm('Are you sure you want to PERMANENTLY DELETE this room? All data will be lost forever.')) return;
+    isDeleting.current = true;
     try {
       await fetch('/api/admin', {
         method: 'POST',
@@ -341,6 +343,9 @@ export default function RoomPage() {
 
         if (!res.ok) {
           if (res.status === 403 || res.status === 401) {
+            // Stop if we are intentionally deleting the room
+            if (isDeleting.current) return;
+
             // 403: Room missing (restart)
             // 401: User missing (restart/persistence lag)
             // Attempt to auto-rejoin in both cases.
