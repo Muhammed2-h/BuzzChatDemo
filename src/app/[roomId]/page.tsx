@@ -322,9 +322,11 @@ export default function RoomPage() {
         if (!isActive) return;
 
         if (!res.ok) {
-          if (res.status === 403) {
-            // Room might have been reset (server restart). Try to auto-rejoin/recreate.
-            console.log("Polling failed (403). Attempting to auto-rejoin...");
+          if (res.status === 403 || res.status === 401) {
+            // 403: Room missing (restart)
+            // 401: User missing (restart/persistence lag)
+            // Attempt to auto-rejoin in both cases.
+            console.log(`Polling failed (${res.status}). Attempting to auto-rejoin...`);
             try {
               const joinRes = await fetch('/api/join', {
                 method: 'POST',
