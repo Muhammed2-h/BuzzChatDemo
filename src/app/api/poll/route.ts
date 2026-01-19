@@ -72,7 +72,7 @@ export async function GET(request: Request) {
     }
 
     const newMessages = room.messages.filter(
-      (msg) => msg.timestamp > sinceTimestamp
+      (msg) => msg.timestamp > sinceTimestamp || (msg.editedAt && msg.editedAt > sinceTimestamp)
     );
 
     return NextResponse.json({
