@@ -178,6 +178,24 @@ export default function RoomPage() {
     }
   };
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleBeforeUnload = () => {
+      // Send a beacon to notify the server we are leaving
+      // keepalive: true ensures the request completes even after the tab closes
+      fetch('/api/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId, passkey, username }),
+        keepalive: true,
+      });
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isAuthenticated, roomId, passkey, username]);
+
   const handleClearChat = async () => {
     try {
       const res = await fetch('/api/clear', {
