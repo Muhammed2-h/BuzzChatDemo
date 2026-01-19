@@ -523,13 +523,7 @@ export default function RoomPage() {
           <div className="space-y-4 sm:space-y-6">
             {messages.map((msg, index) => {
               if (msg.user === 'System') {
-                return (
-                  <div key={index} className="flex justify-center my-2">
-                    <span className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full">
-                      {msg.text}
-                    </span>
-                  </div>
-                );
+                return null;
               }
 
               // Announcement messages
