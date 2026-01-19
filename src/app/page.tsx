@@ -21,10 +21,14 @@ export default function HomePage() {
           setActiveRooms(data.rooms);
         }
       } catch (err) {
-        console.error('Failed to fetch rooms', err);
+        // Silently fail on network/polling errors to avoid console spam
       }
     };
-    fetchRooms();
+
+    fetchRooms(); // Initial fetch
+    const interval = setInterval(fetchRooms, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleJoinRoom = (e: React.FormEvent) => {
