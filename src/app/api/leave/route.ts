@@ -21,6 +21,11 @@ export async function POST(request: Request) {
     const userIndex = room.users.findIndex(user => user.username === username);
     if (userIndex !== -1) {
       room.users.splice(userIndex, 1);
+
+      // Note: We intentionally do NOT clear or transfer room.creator here.
+      // If the owner leaves, the room stays "owned" by them. 
+      // When they rejoin with the same username, they regain control.
+
       room.messages.push({
         user: 'System',
         text: `${username} left the room.`,
