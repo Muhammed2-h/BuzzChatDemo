@@ -322,6 +322,27 @@ export default function RoomPage() {
         if (!isActive) return;
 
         if (!res.ok) {
+          if (res.status === 403) {
+            // Room might have been reset (server restart). Try to auto-rejoin/recreate.
+            console.log("Polling failed (403). Attempting to auto-rejoin...");
+            try {
+              const joinRes = await fetch('/api/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roomId, passkey, username }),
+              });
+
+              if (joinRes.ok) {
+                console.log("Auto-rejoin successful! Resuming poll.");
+                // Don't logout. Just retry polling in next cycle.
+                timeoutId = setTimeout(pollMessages, 2000);
+                return;
+              }
+            } catch (rejoinErr) {
+              console.error("Auto-rejoin failed:", rejoinErr);
+            }
+          }
+
           const errData = await res.json().catch(() => ({}));
           setIsAuthenticated(false);
           setError(errData.error || 'Connection lost. Please re-join.');
