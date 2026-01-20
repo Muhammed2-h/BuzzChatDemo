@@ -35,6 +35,7 @@ export interface Room {
   creator?: string;
   isDeleted?: boolean;
   ownerToken?: string; // Token of the true owner/creator
+  adminCode?: string; // Secret code for creator recovery
 }
 
 // Helper to sanitize Room IDs consistently

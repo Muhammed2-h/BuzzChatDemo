@@ -29,8 +29,10 @@ export default function RoomPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [passkey, setPasskey] = useState('');
+  const [adminCode, setAdminCode] = useState('');
   const [sessionToken, setSessionToken] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
+
   const [currentMessage, setCurrentMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
@@ -99,7 +101,7 @@ export default function RoomPage() {
       const res = await fetch('/api/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, passkey, username, sessionToken: storedToken || undefined }),
+        body: JSON.stringify({ roomId, passkey, username, sessionToken: storedToken || undefined, adminCode }),
       });
 
       const data = await res.json();
@@ -479,6 +481,16 @@ export default function RoomPage() {
                   value={passkey}
                   onChange={(e) => setPasskey(e.target.value)}
                   required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="adminCode">Admin Code (Optional)</Label>
+                <Input
+                  id="adminCode"
+                  type="password"
+                  placeholder="For reclaiming ownership"
+                  value={adminCode}
+                  onChange={(e) => setAdminCode(e.target.value)}
                 />
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}

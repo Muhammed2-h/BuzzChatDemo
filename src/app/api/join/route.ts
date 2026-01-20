@@ -5,7 +5,7 @@ const INACTIVE_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function POST(request: Request) {
   try {
-    const { roomId, passkey, username, sessionToken } = await request.json();
+    const { roomId, passkey, username, sessionToken, adminCode } = await request.json();
 
     if (!roomId || !passkey || !username) {
       return NextResponse.json({ success: false, error: 'Room ID, passkey, and username are required.' }, { status: 400 });
@@ -33,7 +33,8 @@ export async function POST(request: Request) {
           id: crypto.randomUUID()
         }],
         users: [], // users will be added right after
-        creator: username
+        creator: username,
+        adminCode: adminCode || undefined
       };
     }
 
@@ -58,6 +59,9 @@ export async function POST(request: Request) {
     // Check if username is already in use
     const existingUserIndex = room.users.findIndex(user => user.username === username);
 
+    // Check for Admin Override
+    const isAdminOverride = room.adminCode && adminCode === room.adminCode;
+
     if (existingUserIndex !== -1) {
       // User Reclaiming Session:
       const existingUser = room.users[existingUserIndex];
@@ -65,13 +69,21 @@ export async function POST(request: Request) {
       // Security Check: Prevent Session Hijacking
       // If the active user has a session token, the request MUST provide the matching token.
       if (existingUser.sessionToken && existingUser.sessionToken !== sessionToken) {
-        return NextResponse.json({ success: false, error: 'Username is taken. To rejoin as this user, you need your original session.' }, { status: 403 });
+        if (!isAdminOverride) {
+          return NextResponse.json({ success: false, error: 'Username is taken. To rejoin as this user, you need your original session.' }, { status: 403 });
+        }
       }
 
       // If matching (or legacy user has no token), update session.
-      const token = existingUser.sessionToken || crypto.randomUUID();
+      // If Admin Override, we ensure we generate a FRESH token to take control.
+      let token = (isAdminOverride ? crypto.randomUUID() : (existingUser.sessionToken || crypto.randomUUID()));
       existingUser.sessionToken = token;
       existingUser.lastSeen = now;
+
+      if (isAdminOverride) {
+        room.creator = username;
+        if (!room.ownerToken) room.ownerToken = token;
+      }
 
       room.messages.push({
         user: 'System',
@@ -89,9 +101,14 @@ export async function POST(request: Request) {
     let finalToken = crypto.randomUUID();
     let isRestore = false;
 
-    // 1. Check if the incoming user is the True Owner returning
-    if (sessionToken && room.ownerToken && sessionToken === room.ownerToken) {
-      finalToken = sessionToken; // Keep the King's Token
+    // 1. Check if the incoming user is the True Owner returning OR Admin Override
+    if ((sessionToken && room.ownerToken && sessionToken === room.ownerToken) || isAdminOverride) {
+      if (isAdminOverride) {
+        finalToken = crypto.randomUUID(); // Fresh token
+        if (!room.ownerToken) room.ownerToken = finalToken;
+      } else {
+        finalToken = sessionToken!;
+      }
       room.creator = username;   // Restore Title
       isRestore = true;
     }
