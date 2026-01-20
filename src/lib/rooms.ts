@@ -34,6 +34,7 @@ export interface Room {
   bannedUsers?: string[];
   creator?: string;
   isDeleted?: boolean;
+  ownerToken?: string; // Token of the true owner/creator
 }
 
 // Helper to sanitize Room IDs consistently

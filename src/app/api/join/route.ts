@@ -85,18 +85,38 @@ export async function POST(request: Request) {
     }
 
     // Add new user to the room
-    const newToken = crypto.randomUUID();
-    room.users.push({ username, lastSeen: now, sessionToken: newToken });
+    // Add new user to the room
+    let finalToken = crypto.randomUUID();
+    let isRestore = false;
+
+    // 1. Check if the incoming user is the True Owner returning
+    if (sessionToken && room.ownerToken && sessionToken === room.ownerToken) {
+      finalToken = sessionToken; // Keep the King's Token
+      room.creator = username;   // Restore Title
+      isRestore = true;
+    }
+
+    // 2. If this is a fresh room (just created), set the Owner Token
+    if (username === room.creator && !room.ownerToken) {
+      room.ownerToken = finalToken;
+    }
+
+    room.users.push({ username, lastSeen: now, sessionToken: finalToken });
+
+    const joinMsg = isRestore
+      ? `${username} returned and reclaimed ownership!`
+      : `${username} has joined.`;
+
     room.messages.push({
       user: 'System',
-      text: `${username} has joined.`,
+      text: joinMsg,
       timestamp: now,
       id: crypto.randomUUID()
     });
 
     saveRooms();
 
-    return NextResponse.json({ success: true, sessionToken: newToken });
+    return NextResponse.json({ success: true, sessionToken: finalToken });
 
   } catch (error) {
     console.error('[API/JOIN] Error:', error);
