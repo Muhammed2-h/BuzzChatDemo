@@ -177,10 +177,10 @@ export default function RoomPage() {
       await fetch('/api/leave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, passkey, username }),
+        body: JSON.stringify({ roomId, passkey, username, explicit: true }),
       });
     } catch (err) {
-      console.error('Failed to notify server of disconnection:', err);
+      //...
     } finally {
       router.push('/');
     }
@@ -195,7 +195,7 @@ export default function RoomPage() {
       fetch('/api/leave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, passkey, username }),
+        body: JSON.stringify({ roomId, passkey, username, explicit: false }),
         keepalive: true,
       });
     };

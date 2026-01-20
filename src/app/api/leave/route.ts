@@ -3,7 +3,7 @@ import { rooms, saveRooms, sanitizeId } from '@/lib/rooms';
 
 export async function POST(request: Request) {
   try {
-    const { roomId, passkey, username } = await request.json();
+    const { roomId, passkey, username, explicit } = await request.json();
 
     if (!roomId || !passkey || !username) {
       return NextResponse.json({ success: false, error: 'Room ID, passkey, and username are required.' }, { status: 400 });
@@ -17,19 +17,26 @@ export async function POST(request: Request) {
 
     const room = rooms[id];
 
-
-
     const userIndex = room.users.findIndex(user => user.username === username);
     if (userIndex !== -1) {
       room.users.splice(userIndex, 1);
 
-      // Note: We intentionally do NOT clear or transfer room.creator here.
-      // If the owner leaves, the room stays "owned" by them. 
-      // When they rejoin with the same username, they regain control.
+      let messageText = `${username} left the room.`;
+
+      // Succession Protocol: Seniority Rule
+      if (explicit && room.creator === username) {
+        if (room.users.length > 0) {
+          // room.users[0] is the user who joined earliest among survivors
+          // (since we append new users to the end)
+          const newOwner = room.users[0].username;
+          room.creator = newOwner;
+          messageText = `${username} left. Ownership transferred to ${newOwner}.`;
+        }
+      }
 
       room.messages.push({
         user: 'System',
-        text: `${username} left the room.`,
+        text: messageText,
         timestamp: Date.now(),
         id: crypto.randomUUID()
       });
