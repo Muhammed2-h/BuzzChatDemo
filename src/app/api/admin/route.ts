@@ -23,6 +23,10 @@ export async function POST(request: Request) {
         const targetIndex = room.users.findIndex(u => u.username === targetUser);
 
         if (action === 'kick') {
+            if (adminUser !== room.creator) {
+                return NextResponse.json({ success: false, error: 'Only the room creator can kick users.' }, { status: 403 });
+            }
+
             if (targetUser === room.creator) {
                 return NextResponse.json({ success: false, error: 'Cannot kick the room owner.' }, { status: 403 });
             }
