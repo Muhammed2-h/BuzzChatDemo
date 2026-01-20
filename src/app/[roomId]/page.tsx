@@ -469,7 +469,7 @@ export default function RoomPage() {
                   <Label htmlFor="username">Username</Label>
                   <Input
                     className="w-32 h-6 text-xs px-2"
-                    placeholder="Admin Code (Opt)"
+                    placeholder="Admin Code"
                     type="password"
                     value={adminCode}
                     onChange={(e) => setAdminCode(e.target.value)}
