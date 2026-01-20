@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { rooms, type Message, saveRooms, sanitizeId } from '@/lib/rooms';
+import { rooms, type Message, saveRooms, sanitizeId, addMessage } from '@/lib/rooms';
+
+
 
 export async function POST(request: Request) {
   try {
@@ -49,12 +51,7 @@ export async function POST(request: Request) {
       readBy: [],
     };
 
-    room.messages.push(message);
-
-    // To prevent memory leaks on a long-running server, cap messages per room.
-    if (room.messages.length > 100) {
-      room.messages = room.messages.slice(-100);
-    }
+    addMessage(room, message);
 
     saveRooms();
     return NextResponse.json({ success: true, message });

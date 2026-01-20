@@ -80,3 +80,12 @@ export const saveRooms = () => {
     if (e) console.error("Failed to save room data:", e);
   });
 };
+
+// Helper: Add message with pruning to prevent memory bloating
+export const addMessage = (room: Room, message: Message) => {
+  room.messages.push(message);
+  if (room.messages.length > 500) {
+    // Keep only the last 500 messages
+    room.messages = room.messages.slice(-500);
+  }
+};
