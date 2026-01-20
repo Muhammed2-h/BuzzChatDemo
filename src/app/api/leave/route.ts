@@ -9,12 +9,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Room ID, passkey, and username are required.' }, { status: 400 });
     }
 
-    if (!rooms[roomId] || rooms[roomId].passkey !== passkey) {
+    const id = sanitizeId(roomId);
+    if (!rooms[id] || rooms[id].passkey !== passkey) {
       // Fail silently if room doesn't exist or passkey is wrong
       return NextResponse.json({ success: true });
     }
 
-    const room = rooms[sanitizeId(roomId)];
+    const room = rooms[id];
 
 
 
