@@ -194,12 +194,9 @@ export default function RoomPage() {
     const handleBeforeUnload = () => {
       // Send a beacon to notify the server we are leaving
       // keepalive: true ensures the request completes even after the tab closes
-      fetch('/api/leave', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, passkey, username, explicit: false }),
-        keepalive: true,
-      });
+      const payload = JSON.stringify({ roomId, passkey, username, explicit: false });
+      const blob = new Blob([payload], { type: 'application/json' });
+      navigator.sendBeacon('/api/leave', blob);
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
