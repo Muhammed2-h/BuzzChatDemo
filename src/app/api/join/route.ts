@@ -18,6 +18,10 @@ export async function POST(request: Request) {
 
     const now = Date.now();
 
+    if (rooms[sanitizedRoomId] && rooms[sanitizedRoomId].isDeleted) {
+      delete rooms[sanitizedRoomId];
+    }
+
     if (!rooms[sanitizedRoomId]) {
       // Room doesn't exist, create it.
       rooms[sanitizedRoomId] = {
@@ -59,14 +63,14 @@ export async function POST(request: Request) {
       // Since they provided the correct room passkey, we allow them to take over this username.
       // This solves the issue of users getting locked out if they disconnect without a clean exit.
       room.users[existingUserIndex].lastSeen = now;
-      
+
       room.messages.push({
         user: 'System',
         text: `${username} reconnected.`,
         timestamp: now,
         id: crypto.randomUUID()
       });
-      
+
       saveRooms();
       return NextResponse.json({ success: true });
     }
