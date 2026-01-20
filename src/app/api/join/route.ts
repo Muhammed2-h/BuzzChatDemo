@@ -52,11 +52,26 @@ export async function POST(request: Request) {
     room.users = activeUsers;
 
     // Check if username is already in use
-    if (room.users.some(user => user.username === username)) {
-      return NextResponse.json({ success: false, error: 'Username is already taken in this room.' }, { status: 409 });
+    const existingUserIndex = room.users.findIndex(user => user.username === username);
+
+    if (existingUserIndex !== -1) {
+      // User Reclaiming Session:
+      // Since they provided the correct room passkey, we allow them to take over this username.
+      // This solves the issue of users getting locked out if they disconnect without a clean exit.
+      room.users[existingUserIndex].lastSeen = now;
+      
+      room.messages.push({
+        user: 'System',
+        text: `${username} reconnected.`,
+        timestamp: now,
+        id: crypto.randomUUID()
+      });
+      
+      saveRooms();
+      return NextResponse.json({ success: true });
     }
 
-    // Add user to the room
+    // Add new user to the room
     room.users.push({ username, lastSeen: now });
     room.messages.push({
       user: 'System',
