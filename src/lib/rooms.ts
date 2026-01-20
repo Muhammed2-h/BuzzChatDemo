@@ -72,9 +72,11 @@ if (fs.existsSync(DATA_FILE)) {
 export const rooms: Record<string, Room> = loadedRooms;
 
 export const saveRooms = () => {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(rooms, null, 2));
-  } catch (e) {
-    console.error("Failed to save room data:", e);
-  }
+  // Serialization happens synchronously to capture state
+  const data = JSON.stringify(rooms);
+
+  // Write happens asynchronously to avoid blocking the event loop
+  fs.writeFile(DATA_FILE, data, (e) => {
+    if (e) console.error("Failed to save room data:", e);
+  });
 };
