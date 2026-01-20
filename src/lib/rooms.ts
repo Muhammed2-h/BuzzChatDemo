@@ -23,6 +23,7 @@ export interface User {
   isTyping?: boolean;
   lastReadTimestamp?: number;
   sessionToken?: string; // Secret token to verify identity
+  isAdmin?: boolean; // Is this user an admin?
 }
 
 export interface Room {

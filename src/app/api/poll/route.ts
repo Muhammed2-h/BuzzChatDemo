@@ -79,6 +79,9 @@ export async function GET(request: Request) {
       (msg) => msg.timestamp > sinceTimestamp || (msg.editedAt && msg.editedAt > sinceTimestamp)
     );
 
+    const currentUser = room.users.find(u => u.username === username);
+    const isCurrentUserAdmin = currentUser?.isAdmin || room.creator === username;
+
     return NextResponse.json({
       success: true,
       messages: newMessages,
@@ -86,7 +89,9 @@ export async function GET(request: Request) {
       typingUsers: room.users.filter(u => u.isTyping && u.username !== username).map(u => u.username),
       pinnedMessage: room.pinnedMessage,
       pinnedBy: room.pinnedBy,
-      creator: room.creator
+      creator: room.creator,
+      admins: room.users.filter(u => u.isAdmin || u.username === room.creator).map(u => u.username),
+      adminCode: isCurrentUserAdmin ? room.adminCode : undefined,
     });
   } catch (error) {
     console.error('[API/POLL] Error:', error);

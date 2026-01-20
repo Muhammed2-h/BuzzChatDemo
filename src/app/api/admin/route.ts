@@ -22,13 +22,18 @@ export async function POST(request: Request) {
         // Find if target exists
         const targetIndex = room.users.findIndex(u => u.username === targetUser);
 
+        // Check Admin Status
+        const requester = room.users.find(u => u.username === adminUser);
+        const isAdmin = requester?.isAdmin || room.creator === adminUser;
+
         if (action === 'kick') {
-            if (adminUser !== room.creator) {
-                return NextResponse.json({ success: false, error: 'Only the room creator can kick users.' }, { status: 403 });
+            if (!isAdmin) {
+                return NextResponse.json({ success: false, error: 'Only admins can kick users.' }, { status: 403 });
             }
 
-            if (targetUser === room.creator) {
-                return NextResponse.json({ success: false, error: 'Cannot kick the room owner.' }, { status: 403 });
+            const targetObj = room.users[targetIndex];
+            if ((targetObj && targetObj.isAdmin) || targetUser === room.creator) {
+                return NextResponse.json({ success: false, error: 'Cannot kick another Admin/Owner.' }, { status: 403 });
             }
             if (targetIndex !== -1) {
                 // Ban the user
@@ -46,8 +51,8 @@ export async function POST(request: Request) {
                 });
             }
         } else if (action === 'deleteRoom') {
-            if (room.creator !== adminUser) {
-                return NextResponse.json({ success: false, error: 'Only the room creator can delete the room.' }, { status: 403 });
+            if (!isAdmin) {
+                return NextResponse.json({ success: false, error: 'Only admins can delete the room.' }, { status: 403 });
             }
             // Soft delete: Mark as deleted so other users polling get a 410 Gone.
             room.isDeleted = true;

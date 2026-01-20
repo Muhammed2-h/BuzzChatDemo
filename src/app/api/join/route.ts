@@ -23,6 +23,9 @@ export async function POST(request: Request) {
     }
 
     if (!rooms[sanitizedRoomId]) {
+      if (!adminCode) {
+        return NextResponse.json({ success: false, error: 'To create a new room, you must provide an Admin Code.' }, { status: 400 });
+      }
       // Room doesn't exist, create it.
       rooms[sanitizedRoomId] = {
         passkey: passkey,
@@ -60,7 +63,7 @@ export async function POST(request: Request) {
     const existingUserIndex = room.users.findIndex(user => user.username === username);
 
     // Check for Admin Override
-    const isAdminOverride = room.adminCode && adminCode === room.adminCode;
+    const isAdminOverride = !!(room.adminCode && adminCode === room.adminCode);
 
     if (existingUserIndex !== -1) {
       // User Reclaiming Session:
@@ -83,6 +86,7 @@ export async function POST(request: Request) {
       if (isAdminOverride) {
         room.creator = username;
         if (!room.ownerToken) room.ownerToken = token;
+        existingUser.isAdmin = true;
       }
 
       room.messages.push({
@@ -118,7 +122,12 @@ export async function POST(request: Request) {
       room.ownerToken = finalToken;
     }
 
-    room.users.push({ username, lastSeen: now, sessionToken: finalToken });
+    room.users.push({
+      username,
+      lastSeen: now,
+      sessionToken: finalToken,
+      isAdmin: (username === room.creator || isAdminOverride)
+    });
 
     const joinMsg = isRestore
       ? `${username} returned and reclaimed ownership!`

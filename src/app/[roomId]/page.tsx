@@ -45,6 +45,8 @@ export default function RoomPage() {
 
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [creator, setCreator] = useState<string | null>(null);
+  const [admins, setAdmins] = useState<string[]>([]);
+  const [fetchedAdminCode, setFetchedAdminCode] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [isAnnouncementMode, setIsAnnouncementMode] = useState(false);
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
@@ -416,6 +418,8 @@ export default function RoomPage() {
           setPinnedMessage(data.pinnedMessage || null);
           setPinnedBy(data.pinnedBy || []);
           setCreator(data.creator || null);
+          if (data.admins) setAdmins(data.admins);
+          if (data.adminCode) setFetchedAdminCode(data.adminCode);
         }
       } catch (error) {
         if (isActive) {
@@ -512,6 +516,9 @@ export default function RoomPage() {
               <span className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate max-w-[100px] sm:max-w-none">{username}</span>
             </div>
             <span className="text-[10px] text-muted-foreground/40 border-l pl-3 hidden md:inline font-mono">ID: {passkey}</span>
+            {fetchedAdminCode && (
+              <span className="text-[10px] text-yellow-600/80 border-l pl-3 hidden md:inline font-mono font-bold">ADMIN: {fetchedAdminCode}</span>
+            )}
           </div>
         </div>
 
@@ -767,10 +774,10 @@ export default function RoomPage() {
                           {u} {u === username && "(You)"}
                         </span>
                         <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                          {creator === u ? <span className="text-yellow-600 font-semibold">👑 Owner</span> : 'Online'}
+                          {admins.includes(u) || creator === u ? <span className="text-yellow-600 font-semibold">👑 Admin</span> : 'Online'}
                         </span>
                       </div>
-                      {username === creator && u !== username && (
+                      {admins.includes(username) && !admins.includes(u) && u !== username && (
                         <Button variant="ghost" size="icon" className="ml-auto h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleKick(u)} title="Kick User">
                           <X className="h-4 w-4" />
                         </Button>
