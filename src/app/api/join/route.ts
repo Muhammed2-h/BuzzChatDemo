@@ -5,7 +5,7 @@ const INACTIVE_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export async function POST(request: Request) {
   try {
-    const { roomId, passkey, username } = await request.json();
+    const { roomId, passkey, username, sessionToken } = await request.json();
 
     if (!roomId || !passkey || !username) {
       return NextResponse.json({ success: false, error: 'Room ID, passkey, and username are required.' }, { status: 400 });
@@ -60,9 +60,18 @@ export async function POST(request: Request) {
 
     if (existingUserIndex !== -1) {
       // User Reclaiming Session:
-      // Since they provided the correct room passkey, we allow them to take over this username.
-      // This solves the issue of users getting locked out if they disconnect without a clean exit.
-      room.users[existingUserIndex].lastSeen = now;
+      const existingUser = room.users[existingUserIndex];
+
+      // Security Check: Prevent Session Hijacking
+      // If the active user has a session token, the request MUST provide the matching token.
+      if (existingUser.sessionToken && existingUser.sessionToken !== sessionToken) {
+        return NextResponse.json({ success: false, error: 'Username is taken. To rejoin as this user, you need your original session.' }, { status: 403 });
+      }
+
+      // If matching (or legacy user has no token), update session.
+      const token = existingUser.sessionToken || crypto.randomUUID();
+      existingUser.sessionToken = token;
+      existingUser.lastSeen = now;
 
       room.messages.push({
         user: 'System',
@@ -72,11 +81,12 @@ export async function POST(request: Request) {
       });
 
       saveRooms();
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, sessionToken: token });
     }
 
     // Add new user to the room
-    room.users.push({ username, lastSeen: now });
+    const newToken = crypto.randomUUID();
+    room.users.push({ username, lastSeen: now, sessionToken: newToken });
     room.messages.push({
       user: 'System',
       text: `${username} has joined.`,
@@ -86,7 +96,7 @@ export async function POST(request: Request) {
 
     saveRooms();
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, sessionToken: newToken });
 
   } catch (error) {
     console.error('[API/JOIN] Error:', error);

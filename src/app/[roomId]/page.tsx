@@ -29,6 +29,7 @@ export default function RoomPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [passkey, setPasskey] = useState('');
+  const [sessionToken, setSessionToken] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -91,16 +92,24 @@ export default function RoomPage() {
     }
 
     try {
+      // Check for stored session token
+      const storageKey = `buzzchat_token_${roomId}_${username}`;
+      const storedToken = localStorage.getItem(storageKey);
+
       const res = await fetch('/api/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, passkey, username }),
+        body: JSON.stringify({ roomId, passkey, username, sessionToken: storedToken || undefined }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
         setIsAuthenticated(true);
+        if (data.sessionToken) {
+          setSessionToken(data.sessionToken);
+          localStorage.setItem(storageKey, data.sessionToken);
+        }
       } else {
         setError(data.error || 'Failed to join room.');
         setTimeout(() => setError(''), 3000);

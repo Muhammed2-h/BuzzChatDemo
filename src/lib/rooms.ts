@@ -22,6 +22,7 @@ export interface User {
   lastSeen: number;
   isTyping?: boolean;
   lastReadTimestamp?: number;
+  sessionToken?: string; // Secret token to verify identity
 }
 
 export interface Room {
