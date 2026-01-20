@@ -465,7 +465,16 @@ export default function RoomPage() {
           <form onSubmit={handleJoin}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    className="w-32 h-6 text-xs px-2"
+                    placeholder="Admin Code (Opt)"
+                    type="password"
+                    value={adminCode}
+                    onChange={(e) => setAdminCode(e.target.value)}
+                  />
+                </div>
                 <Input
                   id="username"
                   placeholder="Your name"
@@ -483,16 +492,6 @@ export default function RoomPage() {
                   value={passkey}
                   onChange={(e) => setPasskey(e.target.value)}
                   required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="adminCode">Admin Code (Optional)</Label>
-                <Input
-                  id="adminCode"
-                  type="password"
-                  placeholder="For reclaiming ownership"
-                  value={adminCode}
-                  onChange={(e) => setAdminCode(e.target.value)}
                 />
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
