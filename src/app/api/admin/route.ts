@@ -31,10 +31,16 @@ export async function POST(request: Request) {
                 return NextResponse.json({ success: false, error: 'Cannot kick the room owner.' }, { status: 403 });
             }
             if (targetIndex !== -1) {
+                // Ban the user
+                if (!room.bannedUsers) room.bannedUsers = [];
+                if (!room.bannedUsers.includes(targetUser)) {
+                    room.bannedUsers.push(targetUser);
+                }
+
                 room.users.splice(targetIndex, 1);
                 room.messages.push({
                     user: 'System',
-                    text: `${adminUser} kicked ${targetUser}.`,
+                    text: `${adminUser} kicked (and banned) ${targetUser}.`,
                     timestamp: Date.now(),
                     id: crypto.randomUUID()
                 });
