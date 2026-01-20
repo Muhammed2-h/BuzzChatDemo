@@ -22,11 +22,14 @@ export async function POST(request: Request) {
       delete rooms[sanitizedRoomId];
     }
 
+    let isNewRoom = false;
+
     if (!rooms[sanitizedRoomId]) {
       if (!adminCode) {
         return NextResponse.json({ success: false, error: 'To create a new room, you must provide an Admin Code.' }, { status: 400 });
       }
       // Room doesn't exist, create it.
+      isNewRoom = true;
       rooms[sanitizedRoomId] = {
         passkey: passkey,
         messages: [{
@@ -106,7 +109,7 @@ export async function POST(request: Request) {
     let isRestore = false;
 
     // 1. Check if the incoming user is the True Owner returning OR Admin Override
-    if ((sessionToken && room.ownerToken && sessionToken === room.ownerToken) || isAdminOverride) {
+    if (((sessionToken && room.ownerToken && sessionToken === room.ownerToken) || isAdminOverride) && !isNewRoom) {
       if (isAdminOverride) {
         finalToken = crypto.randomUUID(); // Fresh token
         if (!room.ownerToken) room.ownerToken = finalToken;
