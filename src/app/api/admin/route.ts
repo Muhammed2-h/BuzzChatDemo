@@ -54,21 +54,27 @@ export async function POST(request: Request) {
             if (!isAdmin) {
                 return NextResponse.json({ success: false, error: 'Only admins can delete the room.' }, { status: 403 });
             }
-            // Soft delete: Mark as deleted so other users polling get a 410 Gone.
-            room.isDeleted = true;
-            room.users = []; // Remove all users immediately
+            // Scheduled delete: Notify users, lock entry, actual delete in 60s
+            room.deletionScheduledAt = Date.now() + 60000;
+            addMessage(room, {
+                user: 'System',
+                text: '⚠️ ROOM DELETING: This room will close permanently in 60 seconds.',
+                timestamp: Date.now(),
+                id: crypto.randomUUID()
+            });
             saveRooms();
 
-            // Hard delete after 30 seconds to allow time for polls to catch the 410
+            // Hard delete after 60 seconds
             setTimeout(() => {
                 const id = sanitizeId(roomId);
-                if (rooms[id] && rooms[id].isDeleted) {
+                if (rooms[id]) {
                     delete rooms[id];
                     saveRooms();
+                    console.log(`Room ${id} deleted per schedule.`);
                 }
-            }, 30000);
+            }, 60000);
 
-            return NextResponse.json({ success: true, message: 'Room deleted.' });
+            return NextResponse.json({ success: true, message: 'Room deletion scheduled in 1 minute.' });
         }
 
         saveRooms();

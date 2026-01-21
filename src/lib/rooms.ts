@@ -35,6 +35,7 @@ export interface Room {
   bannedUsers?: string[];
   creator?: string;
   isDeleted?: boolean;
+  deletionScheduledAt?: number;
   ownerToken?: string; // Token of the true owner/creator
   adminCode?: string; // Secret code for creator recovery
 }

@@ -62,6 +62,21 @@ export async function POST(request: Request) {
     const activeUsers = room.users.filter(user => (now - user.lastSeen) < INACTIVE_TIMEOUT_MS);
     room.users = activeUsers;
 
+    // 1. Check if Room is scheduled for deletion
+    if (room.deletionScheduledAt) {
+      return NextResponse.json({ success: false, error: 'Room is closing down.' }, { status: 410 });
+    }
+
+    // 2. Check Admin Presence (Strict Mode)
+    // Regular users cannot join if no Admin is currently online.
+    // Exception: The user joining IS the admin (creator or has adminCode).
+    const isAnyAdminOnline = room.users.some(u => u.isAdmin || u.username === room.creator);
+    const isJoiningUserAdmin = (username === room.creator) || (room.adminCode && adminCode === room.adminCode);
+
+    if (!isAnyAdminOnline && !isJoiningUserAdmin) {
+      return NextResponse.json({ success: false, error: 'Entry Restricted: An Admin must be present in the room.' }, { status: 403 });
+    }
+
     // Check if username is already in use
     const existingUserIndex = room.users.findIndex(user => user.username === username);
 
