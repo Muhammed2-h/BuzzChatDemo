@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Bell, BellOff, Users, X, Reply, Pin, Trash2, ArrowLeft, MoreVertical, LogOut, Eraser, Edit2, Megaphone, Check, CheckCheck, BarChart3 } from 'lucide-react';
+import { Bell, BellOff, Users, X, Reply, Pin, Trash2, ArrowLeft, MoreVertical, LogOut, Eraser, Edit2, Megaphone, Check, CheckCheck, BarChart3, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Message } from '@/lib/rooms';
 
 export default function RoomPage() {
@@ -883,13 +883,17 @@ export default function RoomPage() {
                   </h3>
                   <div className="space-y-3 text-sm">
                     {/* Total Messages Section */}
-                    <div className="border rounded-md bg-background overflow-hidden">
+                    <div className="border rounded-md bg-background overflow-hidden relative">
                       <div
-                        className="flex justify-between items-center p-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                        className="flex justify-between items-center p-3 cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => setExpandedStats(expandedStats === 'msgs' ? null : 'msgs')}
                       >
-                        <span>Total Messages</span>
-                        <span className="font-mono bg-muted px-1.5 rounded">{messages.length}</span>
+                        <div className="flex items-center gap-2">
+                          {expandedStats === 'msgs' ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                          <span>Total Messages</span>
+                        </div>
+                        {/* Exclude System messages from this count */}
+                        <span className="font-mono bg-muted px-1.5 rounded">{messages.filter(m => m.user !== 'System').length}</span>
                       </div>
 
                       {expandedStats === 'msgs' && stats && (
@@ -897,23 +901,26 @@ export default function RoomPage() {
                           {Object.entries(stats.messageCounts)
                             .sort(([, a], [, b]) => b - a)
                             .map(([u, count]) => (
-                              <div key={u} className="flex justify-between text-xs">
+                              <div key={u} className="flex justify-between text-xs px-2 py-1 hover:bg-muted/50 rounded">
                                 <span>{u}</span>
                                 <span className="font-mono opacity-70">{count}</span>
                               </div>
                             ))}
-                          {Object.keys(stats.messageCounts).length === 0 && <span className="text-xs text-muted-foreground">No user stats yet.</span>}
+                          {Object.keys(stats.messageCounts).length === 0 && <span className="text-xs text-muted-foreground px-2">No user stats yet.</span>}
                         </div>
                       )}
                     </div>
 
                     {/* Active Users Section */}
-                    <div className="border rounded-md bg-background overflow-hidden">
+                    <div className="border rounded-md bg-background overflow-hidden relative">
                       <div
-                        className="flex justify-between items-center p-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                        className="flex justify-between items-center p-3 cursor-pointer hover:bg-muted/50 transition-colors"
                         onClick={() => setExpandedStats(expandedStats === 'users' ? null : 'users')}
                       >
-                        <span>Active Users</span>
+                        <div className="flex items-center gap-2">
+                          {expandedStats === 'users' ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                          <span>Active Users</span>
+                        </div>
                         <span className="font-mono bg-muted px-1.5 rounded">{onlineUsers.length}</span>
                       </div>
 
@@ -923,7 +930,7 @@ export default function RoomPage() {
                             .map(([u, time]) => ({ user: u, time }))
                             .sort((a, b) => a.time - b.time) // Oldest first
                             .map(({ user, time }) => (
-                              <div key={user} className="flex justify-between text-xs items-center">
+                              <div key={user} className="flex justify-between text-xs items-center px-2 py-1 hover:bg-muted/50 rounded">
                                 <span>{user}</span>
                                 <span className="font-mono opacity-70 text-[10px]">{formatDuration(Date.now() - time)}</span>
                               </div>
@@ -932,14 +939,6 @@ export default function RoomPage() {
                       )}
                     </div>
 
-                    <div className="flex justify-between pt-2">
-                      <span className="text-muted-foreground">Total Messages:</span>
-                      <span className="font-semibold">{messages.filter(m => m.user !== 'System').length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Active Users:</span>
-                      <span className="font-semibold">{onlineUsers.length}</span>
-                    </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Room Age:</span>
                       <span className="font-semibold">
@@ -951,15 +950,8 @@ export default function RoomPage() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Most Active:</span>
                       <span className="font-semibold">
-                        {messages.filter(m => m.user !== 'System').length > 0
-                          ? Object.entries(
-                            messages.reduce((acc: Record<string, number>, msg) => {
-                              if (msg.user !== 'System') {
-                                acc[msg.user] = (acc[msg.user] || 0) + 1;
-                              }
-                              return acc;
-                            }, {})
-                          ).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A'
+                        {Object.keys(stats?.messageCounts || {}).length > 0
+                          ? Object.entries(stats?.messageCounts || {}).sort((a, b) => b[1] - a[1])[0][0]
                           : 'N/A'}
                       </span>
                     </div>
