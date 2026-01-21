@@ -515,9 +515,9 @@ export default function RoomPage() {
               <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
               <span className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate max-w-[100px] sm:max-w-none">{username}</span>
             </div>
-            <span className="text-[10px] text-muted-foreground/40 border-l pl-3 hidden md:inline font-mono">ID: {passkey}</span>
+            <span className="text-[10px] text-muted-foreground/40 border-l pl-3 font-mono">ID: {passkey}</span>
             {fetchedAdminCode && (
-              <span className="text-[10px] text-yellow-600/80 border-l pl-3 hidden md:inline font-mono font-bold">ADMIN: {fetchedAdminCode}</span>
+              <span className="text-[10px] text-yellow-600/80 border-l pl-3 font-mono font-bold">ADMIN: {fetchedAdminCode}</span>
             )}
           </div>
         </div>
