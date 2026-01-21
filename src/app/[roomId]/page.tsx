@@ -86,6 +86,58 @@ export default function RoomPage() {
     scrollToBottom();
   }, [messages]);
 
+  // Auto-login on mount
+  useEffect(() => {
+    // Attempt to recover session from localStorage
+    const savedCreds = localStorage.getItem(`buzzchat_creds_${roomId}`);
+    if (savedCreds) {
+      try {
+        const { username: savedUser, passkey: savedPass, token: savedToken, adminCode: savedAdminCode } = JSON.parse(savedCreds);
+        if (savedUser && savedPass) {
+          setUsername(savedUser);
+          setPasskey(savedPass);
+          setSessionToken(savedToken || '');
+          if (savedAdminCode) setAdminCode(savedAdminCode);
+
+          // Auto-trigger join
+          fetch('/api/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              roomId,
+              passkey: savedPass,
+              username: savedUser,
+              sessionToken: savedToken || undefined,
+              adminCode: savedAdminCode
+            }),
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                setIsAuthenticated(true);
+                if (data.sessionToken) {
+                  setSessionToken(data.sessionToken);
+                  // Update storage with fresh token if needed
+                  localStorage.setItem(`buzzchat_creds_${roomId}`, JSON.stringify({
+                    username: savedUser,
+                    passkey: savedPass,
+                    token: data.sessionToken,
+                    adminCode: savedAdminCode
+                  }));
+                }
+              } else {
+                // If auto-login fails (e.g. wrong passkey now), clear storage
+                // localStorage.removeItem(`buzzchat_creds_${roomId}`); // Optional: decide if we want to clear or let user retry
+              }
+            })
+            .catch(e => console.error("Auto-login error", e));
+        }
+      } catch (e) {
+        console.error("Failed to parse saved credentials", e);
+      }
+    }
+  }, [roomId]);
+
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -110,10 +162,19 @@ export default function RoomPage() {
 
       if (res.ok && data.success) {
         setIsAuthenticated(true);
-        if (data.sessionToken) {
-          setSessionToken(data.sessionToken);
-          localStorage.setItem(storageKey, data.sessionToken);
+        const tokenToSave = data.sessionToken || storedToken || sessionToken;
+
+        if (tokenToSave) {
+          setSessionToken(tokenToSave);
         }
+
+        // Save credentials for auto-login
+        localStorage.setItem(`buzzchat_creds_${roomId}`, JSON.stringify({
+          username,
+          passkey,
+          token: tokenToSave,
+          adminCode: adminCode || undefined
+        }));
       } else {
         setError(data.error || 'Failed to join room.');
         setTimeout(() => setError(''), 3000);
@@ -184,6 +245,8 @@ export default function RoomPage() {
         body: JSON.stringify({ roomId, passkey, username, explicit: true }),
         keepalive: true,
       });
+      // Clear saved credentials on explicit logout
+      localStorage.removeItem(`buzzchat_creds_${roomId}`);
     } catch (err) {
       //...
     } finally {
