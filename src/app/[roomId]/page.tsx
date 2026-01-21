@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Bell, BellOff, Users, X, Reply, Pin, Trash2, ArrowLeft, MoreVertical, LogOut, Eraser, Edit2, Megaphone, Check, CheckCheck, BarChart3, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Message } from '@/lib/rooms';
+import { useToast } from '@/hooks/use-toast';
 
 export default function RoomPage() {
   const params = useParams();
@@ -28,6 +29,7 @@ export default function RoomPage() {
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
+  const { toast } = useToast();
   const [passkey, setPasskey] = useState('');
   const [adminCode, setAdminCode] = useState('');
   const [sessionToken, setSessionToken] = useState('');
@@ -257,7 +259,11 @@ export default function RoomPage() {
         }),
       }).catch(err => {
         console.error('Failed to send message:', err);
-        // Ideally notify user of failure, but for simple chat, console log is standard fallback
+        toast({
+          variant: "destructive",
+          title: "Failed to send",
+          description: "Your message could not be sent. Please try again.",
+        });
       });
     }
   };
