@@ -896,18 +896,18 @@ export default function RoomPage() {
                     {/* Total Messages Section */}
                     <div className="border rounded-md bg-background overflow-hidden relative">
                       <div
-                        className="flex justify-between items-center p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => setExpandedStats(expandedStats === 'msgs' ? null : 'msgs')}
+                        className={`flex justify-between items-center p-3 ${admins.includes(username) || creator === username ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+                        onClick={() => (admins.includes(username) || creator === username) && setExpandedStats(expandedStats === 'msgs' ? null : 'msgs')}
                       >
                         <div className="flex items-center gap-2">
-                          {expandedStats === 'msgs' ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                          {(admins.includes(username) || creator === username) && (expandedStats === 'msgs' ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />)}
                           <span>Total Messages</span>
                         </div>
                         {/* Exclude System messages from this count */}
                         <span className="font-mono bg-muted px-1.5 rounded">{messages.filter(m => m.user !== 'System').length}</span>
                       </div>
 
-                      {expandedStats === 'msgs' && stats && (
+                      {(admins.includes(username) || creator === username) && expandedStats === 'msgs' && stats && (
                         <div className="border-t bg-muted/20 p-2 space-y-1 max-h-40 overflow-y-auto">
                           {Object.entries(stats.messageCounts)
                             .sort(([, a], [, b]) => b - a)
@@ -925,17 +925,17 @@ export default function RoomPage() {
                     {/* Active Users Section */}
                     <div className="border rounded-md bg-background overflow-hidden relative">
                       <div
-                        className="flex justify-between items-center p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => setExpandedStats(expandedStats === 'users' ? null : 'users')}
+                        className={`flex justify-between items-center p-3 ${admins.includes(username) || creator === username ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''}`}
+                        onClick={() => (admins.includes(username) || creator === username) && setExpandedStats(expandedStats === 'users' ? null : 'users')}
                       >
                         <div className="flex items-center gap-2">
-                          {expandedStats === 'users' ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                          {(admins.includes(username) || creator === username) && (expandedStats === 'users' ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />)}
                           <span>Active Users</span>
                         </div>
                         <span className="font-mono bg-muted px-1.5 rounded">{onlineUsers.length}</span>
                       </div>
 
-                      {expandedStats === 'users' && stats && (
+                      {(admins.includes(username) || creator === username) && expandedStats === 'users' && stats && (
                         <div className="border-t bg-muted/20 p-2 space-y-1 max-h-40 overflow-y-auto">
                           {Object.entries(stats.joinTimes)
                             .map(([u, time]) => ({ user: u, time }))
