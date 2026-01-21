@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rooms, sanitizeId, addMessage } from '@/lib/rooms';
+import { rooms, sanitizeId, saveRooms, addMessage } from '@/lib/rooms';
 
 const INACTIVE_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -16,9 +16,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Room ID, passkey, and username are required.' }, { status: 400 });
     }
 
-    const room = rooms[sanitizeId(roomId)];
+    const id = sanitizeId(roomId);
+    const room = rooms[id];
 
-    if (room && room.isDeleted) {
+    if (room && (room.isDeleted || (room.deletionScheduledAt && Date.now() > room.deletionScheduledAt))) {
+      if (room.deletionScheduledAt && Date.now() > room.deletionScheduledAt) {
+        delete rooms[id];
+        saveRooms();
+      }
       return NextResponse.json({ success: false, error: 'Room has been deleted.' }, { status: 410 });
     }
 
@@ -39,7 +44,6 @@ export async function GET(request: Request) {
       if (user.username === username) {
         user.lastSeen = now;
         user.isTyping = isTyping;
-        user.lastReadTimestamp = now;
         userFound = true;
       }
     });

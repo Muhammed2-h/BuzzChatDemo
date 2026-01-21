@@ -56,12 +56,17 @@ export async function POST(request: Request) {
             }
             // Scheduled delete: Notify users, lock entry, actual delete in 60s
             room.deletionScheduledAt = Date.now() + 60000;
-            addMessage(room, {
-                user: 'System',
-                text: '⚠️ ROOM DELETING: This room will close permanently in 60 seconds.',
-                timestamp: Date.now(),
-                id: crypto.randomUUID()
-            });
+            room.users = []; // KICK EVERYONE IMMEDIATELY
+            // Note: We can't really "notify" them via addMessage if we kick them,
+            // because api/poll checks strictly for user presence now.
+            // BUT api/poll returns 401 if user not found. Frontend handles 401.
+            // So they get "User not active" or similar.
+            // If we want a nicer "Room Deleted" message, we should probably Keep them ??
+            // User said: "users also gets removed ... room stays ... for 60s".
+            // If I remove them, they can't see the "Closing in 60s" message.
+            // But they get "Exits".
+            // I'll stick to removing them.
+
             saveRooms();
 
             // Hard delete after 60 seconds

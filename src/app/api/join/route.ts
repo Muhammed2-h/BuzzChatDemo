@@ -18,8 +18,10 @@ export async function POST(request: Request) {
 
     const now = Date.now();
 
-    if (rooms[sanitizedRoomId] && rooms[sanitizedRoomId].isDeleted) {
+    const existingRoom = rooms[sanitizedRoomId];
+    if (existingRoom && (existingRoom.isDeleted || (existingRoom.deletionScheduledAt && now > existingRoom.deletionScheduledAt))) {
       delete rooms[sanitizedRoomId];
+      saveRooms();
     }
 
     let isNewRoom = false;
