@@ -82,6 +82,27 @@ export async function GET(request: Request) {
     const currentUser = room.users.find(u => u.username === username);
     const isCurrentUserAdmin = currentUser?.isAdmin || room.creator === username;
 
+    // Calculate Stats for admins
+    let stats: any = undefined;
+    if (isCurrentUserAdmin) {
+      const messageCounts: Record<string, number> = {};
+      room.messages.forEach(m => {
+        if (m.user !== 'System') {
+          messageCounts[m.user] = (messageCounts[m.user] || 0) + 1;
+        }
+      });
+
+      const joinTimes: Record<string, number> = {};
+      room.users.forEach(u => {
+        joinTimes[u.username] = u.joinedAt || u.lastSeen;
+      });
+
+      stats = {
+        messageCounts,
+        joinTimes
+      };
+    }
+
     return NextResponse.json({
       success: true,
       messages: newMessages,
@@ -92,6 +113,7 @@ export async function GET(request: Request) {
       creator: room.creator,
       admins: room.users.filter(u => u.isAdmin || u.username === room.creator).map(u => u.username),
       adminCode: isCurrentUserAdmin ? room.adminCode : undefined,
+      stats: stats
     });
   } catch (error) {
     console.error('[API/POLL] Error:', error);

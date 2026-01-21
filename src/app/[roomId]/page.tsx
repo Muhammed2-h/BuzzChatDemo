@@ -53,6 +53,21 @@ export default function RoomPage() {
   const [mentionFilter, setMentionFilter] = useState('');
   const [showStats, setShowStats] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
+  const [stats, setStats] = useState<{ messageCounts: Record<string, number>; joinTimes: Record<string, number> } | null>(null);
+  const [expandedStats, setExpandedStats] = useState<string | null>(null);
+
+  // Helper for durations
+  const formatDuration = (ms: number) => {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    if (minutes > 0) return `${minutes}m`;
+    return 'Just now';
+  };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastMessageTimestamp = useRef<number>(0);
@@ -490,6 +505,7 @@ export default function RoomPage() {
           setCreator(data.creator || null);
           if (data.admins) setAdmins(data.admins);
           if (data.adminCode) setFetchedAdminCode(data.adminCode);
+          if (data.stats) setStats(data.stats);
         }
       } catch (error) {
         if (isActive) {
@@ -866,7 +882,57 @@ export default function RoomPage() {
                     Room Statistics
                   </h3>
                   <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
+                    {/* Total Messages Section */}
+                    <div className="border rounded-md bg-background overflow-hidden">
+                      <div
+                        className="flex justify-between items-center p-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => setExpandedStats(expandedStats === 'msgs' ? null : 'msgs')}
+                      >
+                        <span>Total Messages</span>
+                        <span className="font-mono bg-muted px-1.5 rounded">{messages.length}</span>
+                      </div>
+
+                      {expandedStats === 'msgs' && stats && (
+                        <div className="border-t bg-muted/20 p-2 space-y-1 max-h-40 overflow-y-auto">
+                          {Object.entries(stats.messageCounts)
+                            .sort(([, a], [, b]) => b - a)
+                            .map(([u, count]) => (
+                              <div key={u} className="flex justify-between text-xs">
+                                <span>{u}</span>
+                                <span className="font-mono opacity-70">{count}</span>
+                              </div>
+                            ))}
+                          {Object.keys(stats.messageCounts).length === 0 && <span className="text-xs text-muted-foreground">No user stats yet.</span>}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Active Users Section */}
+                    <div className="border rounded-md bg-background overflow-hidden">
+                      <div
+                        className="flex justify-between items-center p-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                        onClick={() => setExpandedStats(expandedStats === 'users' ? null : 'users')}
+                      >
+                        <span>Active Users</span>
+                        <span className="font-mono bg-muted px-1.5 rounded">{onlineUsers.length}</span>
+                      </div>
+
+                      {expandedStats === 'users' && stats && (
+                        <div className="border-t bg-muted/20 p-2 space-y-1 max-h-40 overflow-y-auto">
+                          {Object.entries(stats.joinTimes)
+                            .map(([u, time]) => ({ user: u, time }))
+                            .sort((a, b) => a.time - b.time) // Oldest first
+                            .map(({ user, time }) => (
+                              <div key={user} className="flex justify-between text-xs items-center">
+                                <span>{user}</span>
+                                <span className="font-mono opacity-70 text-[10px]">{formatDuration(Date.now() - time)}</span>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-between pt-2">
                       <span className="text-muted-foreground">Total Messages:</span>
                       <span className="font-semibold">{messages.filter(m => m.user !== 'System').length}</span>
                     </div>

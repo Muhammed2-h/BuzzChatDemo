@@ -24,6 +24,7 @@ export interface User {
   lastReadTimestamp?: number;
   sessionToken?: string; // Secret token to verify identity
   isAdmin?: boolean; // Is this user an admin?
+  joinedAt?: number; // Timestamp when user joined
 }
 
 export interface Room {

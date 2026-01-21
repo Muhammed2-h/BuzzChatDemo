@@ -92,6 +92,8 @@ export async function POST(request: Request) {
         existingUser.isAdmin = true;
       }
 
+      if (!existingUser.joinedAt) existingUser.joinedAt = now;
+
       addMessage(room, {
         user: 'System',
         text: `${username} reconnected.`,
@@ -129,7 +131,8 @@ export async function POST(request: Request) {
       username,
       lastSeen: now,
       sessionToken: finalToken,
-      isAdmin: (username === room.creator || isAdminOverride)
+      isAdmin: (username === room.creator || isAdminOverride),
+      joinedAt: now
     });
 
     const joinMsg = isRestore
