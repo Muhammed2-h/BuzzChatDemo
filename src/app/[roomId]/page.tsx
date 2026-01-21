@@ -202,12 +202,12 @@ export default function RoomPage() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentMessage.trim() || isSending) return;
+    if (!currentMessage.trim()) return;
 
-    setIsSending(true);
-    try {
-      if (editingMessage) {
-        // Edit existing message
+    if (editingMessage) {
+      // Edit logic remains synchronous/blocking to show errors if needed
+      setIsSending(true);
+      try {
         const res = await fetch('/api/edit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -220,34 +220,45 @@ export default function RoomPage() {
           }),
         });
         const data = await res.json();
-
         if (!res.ok || !data.success) {
           alert('Failed to edit message: ' + (data.error || 'Unknown error'));
           return;
         }
         setEditingMessage(null);
-      } else {
-        // Send new message
-        await fetch('/api/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            roomId,
-            passkey,
-            user: username,
-            text: currentMessage,
-            replyTo: replyTo ? { user: replyTo.user, text: replyTo.text, id: replyTo.id } : undefined,
-            isAnnouncement: isAnnouncementMode,
-          }),
-        });
+        setCurrentMessage('');
+      } catch (err) {
+        console.error('Failed to edit message:', err);
+      } finally {
+        setIsSending(false);
       }
+    } else {
+      // New Message: Fire and Forget for speed
+      const textToSend = currentMessage;
+      const replyContext = replyTo ? { user: replyTo.user, text: replyTo.text, id: replyTo.id } : undefined;
+      const announcementMode = isAnnouncementMode;
+
+      // Clear UI Immediately
       setCurrentMessage('');
       setReplyTo(null);
       setIsAnnouncementMode(false);
-    } catch (err) {
-      console.error('Failed to send message:', err);
-    } finally {
-      setIsSending(false);
+      // setIsSending(true); // Don't block. Allow rapid fire.
+
+      // Send in background
+      fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId,
+          passkey,
+          user: username,
+          text: textToSend,
+          replyTo: replyContext,
+          isAnnouncement: announcementMode,
+        }),
+      }).catch(err => {
+        console.error('Failed to send message:', err);
+        // Ideally notify user of failure, but for simple chat, console log is standard fallback
+      });
     }
   };
 
