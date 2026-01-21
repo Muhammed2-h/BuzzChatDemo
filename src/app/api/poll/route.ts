@@ -48,11 +48,13 @@ export async function GET(request: Request) {
       }
     });
 
-    // Mark messages as read by this user
+    // Mark NEW messages as read by this user (only messages since last poll)
     room.messages.forEach(msg => {
-      if (!msg.readBy) msg.readBy = [];
-      if (!msg.readBy.includes(username) && msg.timestamp <= now) {
-        msg.readBy.push(username);
+      if (msg.timestamp > sinceTimestamp) {
+        if (!msg.readBy) msg.readBy = [];
+        if (!msg.readBy.includes(username)) {
+          msg.readBy.push(username);
+        }
       }
     });
 
