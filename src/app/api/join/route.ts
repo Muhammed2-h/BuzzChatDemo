@@ -104,7 +104,8 @@ export async function POST(request: Request) {
       existingUser.lastSeen = now;
 
       if (isAdminOverride) {
-        room.creator = username;
+        // room.creator = username; // Don't steal title
+        if (!room.creator) room.creator = username;
         if (!room.ownerToken) room.ownerToken = token;
         existingUser.isAdmin = true;
       }
@@ -128,15 +129,20 @@ export async function POST(request: Request) {
     let isRestore = false;
 
     // 1. Check if the incoming user is the True Owner returning OR Admin Override
-    if (((sessionToken && room.ownerToken && sessionToken === room.ownerToken) || isAdminOverride) && !isNewRoom) {
+    const isTrueOwner = (sessionToken && room.ownerToken && sessionToken === room.ownerToken);
+
+    if ((isTrueOwner || isAdminOverride) && !isNewRoom) {
       if (isAdminOverride) {
         finalToken = crypto.randomUUID(); // Fresh token
         if (!room.ownerToken) room.ownerToken = finalToken;
       } else {
         finalToken = sessionToken!;
       }
-      room.creator = username;   // Restore Title
-      isRestore = true;
+
+      if (isTrueOwner || !room.creator) {
+        room.creator = username;   // Restore Title only if True Owner
+        isRestore = true;
+      }
     }
 
     // 2. If this is a fresh room (just created), set the Owner Token
