@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rooms, sanitizeId } from '@/lib/rooms';
+import { rooms, sanitizeId, addMessage } from '@/lib/rooms';
 
 const INACTIVE_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
     if (timedOutUsers.length > 0) {
       room.users = activeUsers;
       timedOutUsers.forEach(timedOutUser => {
-        room.messages.push({
+        addMessage(room, {
           user: 'System',
           text: `${timedOutUser.username} has left (timed out).`,
           timestamp: now,

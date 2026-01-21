@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rooms, saveRooms, sanitizeId } from '@/lib/rooms';
+import { rooms, saveRooms, sanitizeId, addMessage } from '@/lib/rooms';
 
 export async function POST(request: Request) {
     try {
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
                 }
 
                 room.users.splice(targetIndex, 1);
-                room.messages.push({
+                addMessage(room, {
                     user: 'System',
                     text: `${adminUser} kicked (and banned) ${targetUser}.`,
                     timestamp: Date.now(),

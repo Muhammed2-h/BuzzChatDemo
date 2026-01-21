@@ -74,10 +74,17 @@ export const rooms: Record<string, Room> = loadedRooms;
 export const saveRooms = () => {
   // Serialization happens synchronously to capture state
   const data = JSON.stringify(rooms);
+  const tempFile = `${DATA_FILE}.tmp`;
 
-  // Write happens asynchronously to avoid blocking the event loop
-  fs.writeFile(DATA_FILE, data, (e) => {
-    if (e) console.error("Failed to save room data:", e);
+  // Write to temp file first, then rename (atomic operation)
+  fs.writeFile(tempFile, data, (err) => {
+    if (err) {
+      console.error("Failed to write temp room data:", err);
+      return;
+    }
+    fs.rename(tempFile, DATA_FILE, (renameErr) => {
+      if (renameErr) console.error("Failed to rename room data file:", renameErr);
+    });
   });
 };
 

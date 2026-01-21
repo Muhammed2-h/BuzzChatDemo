@@ -367,7 +367,13 @@ export default function RoomPage() {
               const joinRes = await fetch('/api/join', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ roomId, passkey, username }),
+                body: JSON.stringify({
+                  roomId,
+                  passkey,
+                  username,
+                  sessionToken,
+                  adminCode: adminCode || fetchedAdminCode || undefined
+                }),
               });
 
               if (joinRes.ok) {

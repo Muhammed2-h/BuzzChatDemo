@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rooms, saveRooms, sanitizeId } from '@/lib/rooms';
+import { rooms, saveRooms, sanitizeId, addMessage } from '@/lib/rooms';
 
 export async function POST(request: Request) {
     try {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
                     // User is toggling OFF their pin
                     room.pinnedBy = room.pinnedBy.filter(u => u !== username);
 
-                    room.messages.push({
+                    addMessage(room, {
                         user: 'System',
                         text: `${username} removed their pin.`,
                         timestamp: Date.now(),
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
                     // If NO ONE is pinning it anymore, clear the message entirely
                     if (room.pinnedBy.length === 0) {
                         room.pinnedMessage = null;
-                        room.messages.push({
+                        addMessage(room, {
                             user: 'System',
                             text: `Message unpinned (no more pinners).`,
                             timestamp: Date.now(),
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
                 } else {
                     // User is adding their pin to the SAME message
                     room.pinnedBy.push(username);
-                    room.messages.push({
+                    addMessage(room, {
                         user: 'System',
                         text: `${username} also pinned the message.`,
                         timestamp: Date.now(),
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
                 // Let's assume pinning a NEW message overwrites the old one and starts fresh with this user.
                 room.pinnedMessage = message;
                 room.pinnedBy = [username];
-                room.messages.push({
+                addMessage(room, {
                     user: 'System',
                     text: `${username} pinned a new message.`,
                     timestamp: Date.now(),
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
             room.pinnedBy = room.pinnedBy.filter(u => u !== username);
 
-            room.messages.push({
+            addMessage(room, {
                 user: 'System',
                 text: `${username} unpinned the message.`,
                 timestamp: Date.now(),

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rooms, saveRooms, sanitizeId } from '@/lib/rooms';
+import { rooms, saveRooms, sanitizeId, addMessage } from '@/lib/rooms';
 
 export async function POST(request: Request) {
   try {
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
         }
       }
 
-      room.messages.push({
+      addMessage(room, {
         user: 'System',
         text: messageText,
         timestamp: Date.now(),

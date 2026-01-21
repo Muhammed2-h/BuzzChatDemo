@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { rooms, saveRooms, sanitizeId } from '@/lib/rooms';
+import { rooms, saveRooms, sanitizeId, addMessage } from '@/lib/rooms';
 
 const INACTIVE_TIMEOUT_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
         existingUser.isAdmin = true;
       }
 
-      room.messages.push({
+      addMessage(room, {
         user: 'System',
         text: `${username} reconnected.`,
         timestamp: now,
@@ -136,7 +136,7 @@ export async function POST(request: Request) {
       ? `${username} returned and reclaimed ownership!`
       : `${username} has joined.`;
 
-    room.messages.push({
+    addMessage(room, {
       user: 'System',
       text: joinMsg,
       timestamp: now,
@@ -144,9 +144,7 @@ export async function POST(request: Request) {
     });
 
     saveRooms();
-
     return NextResponse.json({ success: true, sessionToken: finalToken });
-
   } catch (error) {
     console.error('[API/JOIN] Error:', error);
     return NextResponse.json({ success: false, error: 'An unexpected server error occurred.' }, { status: 500 });
