@@ -71,25 +71,32 @@ if (fs.existsSync(DATA_FILE)) {
 
 export const rooms: Record<string, Room> = loadedRooms;
 
-export const saveRooms = () => {
-  // Serialization happens synchronously to capture state
-  const data = JSON.stringify(rooms);
-  // Use unique temp file to avoid race conditions with parallel writes
-  const tempFile = `${DATA_FILE}.${crypto.randomUUID()}.tmp`;
+let saveTimeout: NodeJS.Timeout | null = null;
 
-  fs.writeFile(tempFile, data, (err) => {
-    if (err) {
-      console.error("Failed to write temp room data:", err);
-      return;
-    }
-    fs.rename(tempFile, DATA_FILE, (renameErr) => {
-      if (renameErr) {
-        console.error("Failed to rename room data file:", renameErr);
-        // Clean up temp file if rename failed
-        fs.unlink(tempFile, () => { });
+export const saveRooms = () => {
+  if (saveTimeout) return;
+
+  saveTimeout = setTimeout(() => {
+    // Serialization happens synchronously to capture state
+    const data = JSON.stringify(rooms);
+    // Use unique temp file to avoid race conditions with parallel writes
+    const tempFile = `${DATA_FILE}.${crypto.randomUUID()}.tmp`;
+
+    fs.writeFile(tempFile, data, (err) => {
+      saveTimeout = null;
+      if (err) {
+        console.error("Failed to write temp room data:", err);
+        return;
       }
+      fs.rename(tempFile, DATA_FILE, (renameErr) => {
+        if (renameErr) {
+          console.error("Failed to rename room data file:", renameErr);
+          // Clean up temp file if rename failed
+          fs.unlink(tempFile, () => { });
+        }
+      });
     });
-  });
+  }, 500);
 };
 
 // Helper: Add message with pruning to prevent memory bloating

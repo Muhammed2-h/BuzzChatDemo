@@ -1,29 +1,33 @@
 
 const BASE_URL = 'http://localhost:3000';
-const ROOM_ID = 'stress-test-room';
+const ROOM_ID = `stress-test-${Date.now()}`; // Unique Room ID
 const PASSKEY = '123';
 const ADMIN_CODE = 'admin123';
 
-const USERS_COUNT = 10;
-const DURATION_MS = 20000; // 20 seconds run
+const USERS_COUNT = 50;
+const DURATION_MS = 30000; // 30 seconds run
 const POLL_INTERVAL = 1000;
-const SEND_INTERVAL = 2500;
+const SEND_INTERVAL = 3000;
 
 let activeUsers = [];
 let errors = 0;
 let messagesSent = 0;
+let refreshCount = 0;
 
 async function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function joinUser(username, isAdminConfig = false) {
+// Mimic the browser's behavior
+async function joinUser(username, storedCreds = null) {
     try {
         const payload = {
             roomId: ROOM_ID,
             passkey: PASSKEY,
             username: username,
-            adminCode: isAdminConfig ? ADMIN_CODE : undefined
+            // If refreshing, we use stored token/adminCode
+            sessionToken: storedCreds?.sessionToken || undefined,
+            adminCode: storedCreds?.adminCode || (username === 'User-1' ? ADMIN_CODE : undefined)
         };
 
         const res = await fetch(`${BASE_URL}/api/join`, {
@@ -39,8 +43,12 @@ async function joinUser(username, isAdminConfig = false) {
             return null;
         }
 
-        console.log(`[${username}] Joined. Token: ${data.sessionToken.substring(0, 5)}...`);
-        return { username, sessionToken: data.sessionToken, lastTimestamp: 0 };
+        return {
+            username,
+            sessionToken: data.sessionToken,
+            adminCode: payload.adminCode,
+            lastTimestamp: storedCreds?.lastTimestamp || 0
+        };
     } catch (e) {
         console.error(`[${username}] Join Error:`, e.message);
         errors++;
@@ -48,29 +56,53 @@ async function joinUser(username, isAdminConfig = false) {
     }
 }
 
+async function leaveUser(user) {
+    try {
+        // Mimic beforeunload 'leave'
+        // explicit: false is key here
+        const payload = JSON.stringify({ roomId: ROOM_ID, passkey: PASSKEY, username: user.username, explicit: false });
+        await fetch(`${BASE_URL}/api/leave`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload
+        });
+    } catch (e) {
+        // Ignore leave errors, beacon is fire-and-forget
+    }
+}
+
 async function poll(user) {
+    if (user.isRefeshing) return;
     try {
         const url = `${BASE_URL}/api/poll?roomId=${ROOM_ID}&passkey=${PASSKEY}&username=${user.username}&since=${user.lastTimestamp}`;
         const res = await fetch(url);
 
         if (!res.ok) {
-            console.error(`[${user.username}] Poll Failed: ${res.status}`);
-            errors++;
+            // If 403/401, in a real browser it would trigger auto-rejoin.
+            // But here we count it as a "momentary drop" unless we are simulating refresh.
+            if (res.status === 401 && !user.isRefeshing) {
+                // console.log(`[${user.username}] 401 during poll (expected if just refreshed)`);
+            } else {
+                console.error(`[${user.username}] Poll Failed: ${res.status}`);
+                errors++;
+            }
             return;
         }
 
         const data = await res.json();
         if (data.success && data.messages.length > 0) {
             user.lastTimestamp = data.messages[data.messages.length - 1].timestamp;
-            // console.log(`[${user.username}] Received ${data.messages.length} new msgs`);
         }
     } catch (e) {
-        console.error(`[${user.username}] Poll Error:`, e.message);
-        errors++;
+        if (!user.isRefeshing) {
+            console.error(`[${user.username}] Poll Error:`, e.message);
+            errors++;
+        }
     }
 }
 
 async function sendMessage(user) {
+    if (user.isRefeshing) return;
     try {
         const text = `Msg from ${user.username} at ${Date.now()}`;
         const res = await fetch(`${BASE_URL}/api/send`, {
@@ -85,68 +117,92 @@ async function sendMessage(user) {
         });
 
         if (res.ok) messagesSent++;
-        else {
+        // Ignore 401s during refresh cycles
+        else if (res.status !== 401) {
             console.error(`[${user.username}] Send Failed: ${res.status}`);
             errors++;
         }
     } catch (e) {
-        console.error(`[${user.username}] Send Error:`, e.message);
+        // Ignore
+    }
+}
+
+async function simulateRefresh(user) {
+    if (user.isRefeshing) return;
+    user.isRefeshing = true;
+    refreshCount++;
+
+    // 1. Stop Polling (Clear Interval not needed, we just gate with isRefeshing)
+
+    // 2. Send Leave (beforeunload)
+    await leaveUser(user);
+
+    // 3. Wait (Page Reload time)
+    await sleep(Math.random() * 1000 + 500);
+
+    // 4. Auto-Rejoin
+    // This is the CRITICAL STEP: We act as if the browser loaded and found creds in localStorage
+    const newUser = await joinUser(user.username, {
+        sessionToken: user.sessionToken,
+        adminCode: user.adminCode
+    });
+
+    if (newUser) {
+        // Success! We are back in.
+        user.sessionToken = newUser.sessionToken;
+        user.isRefeshing = false;
+    } else {
+        console.error(`[${user.username}] FAILED TO REJOIN AFTER REFRESH`);
         errors++;
+        // Stop invalid user
+        clearInterval(user.pollInterval);
+        clearInterval(user.sendInterval);
+        clearInterval(user.refreshInterval);
     }
 }
 
 async function run() {
-    console.log("Starting Stress Test...");
+    console.log(`Starting Chaos Test with ${USERS_COUNT} users in room ${ROOM_ID}...`);
 
-    // 1. Create User 1 (Admin/Creator) to init room
-    const admin = await joinUser('User-1', true);
-    if (admin) activeUsers.push(admin);
-
-    await sleep(1000);
-
-    // 2. Create remaining 9 users
-    for (let i = 2; i <= USERS_COUNT; i++) {
+    // 1. Mass Join
+    for (let i = 1; i <= USERS_COUNT; i++) {
         const u = await joinUser(`User-${i}`);
-        if (u) activeUsers.push(u);
-        await sleep(200); // Stagger joins slightly
+        if (u) {
+            u.pollInterval = setInterval(() => poll(u), POLL_INTERVAL);
+            u.sendInterval = setInterval(() => {
+                if (Math.random() > 0.8) sendMessage(u);
+            }, SEND_INTERVAL);
+
+            // Randomly refresh every ~5-10s
+            u.refreshInterval = setInterval(() => {
+                if (Math.random() > 0.6) simulateRefresh(u);
+            }, 5000 + Math.random() * 5000);
+
+            activeUsers.push(u);
+        }
+        if (i % 10 === 0) console.log(`${i} users joined...`);
+        // Slight stagger to avoid instant network spike
+        await sleep(50);
     }
 
-    console.log(`Initial swarm joined: ${activeUsers.length} users.`);
+    console.log("All users active. Simulation running...");
 
-    // 3. Start Loops
+    // Run for duration
+    await sleep(DURATION_MS);
+
+    console.log("--- STOPPING TEST ---");
     activeUsers.forEach(u => {
-        u.pollInterval = setInterval(() => poll(u), POLL_INTERVAL);
-        u.sendInterval = setInterval(() => {
-            if (Math.random() > 0.3) sendMessage(u);
-        }, SEND_INTERVAL);
+        clearInterval(u.pollInterval);
+        clearInterval(u.sendInterval);
+        clearInterval(u.refreshInterval);
     });
 
-    console.log("Activity loop running...");
-
-    // 4. Mid-stream join (User 11)
-    setTimeout(async () => {
-        console.log("--- ADDING USER 11 ---");
-        const u11 = await joinUser('User-11');
-        if (u11) {
-            u11.pollInterval = setInterval(() => poll(u11), POLL_INTERVAL);
-            u11.sendInterval = setInterval(() => sendMessage(u11), SEND_INTERVAL);
-            activeUsers.push(u11);
-        }
-    }, 10000);
-
-    // 5. End
-    setTimeout(() => {
-        console.log("--- STOPPING TEST ---");
-        activeUsers.forEach(u => {
-            clearInterval(u.pollInterval);
-            clearInterval(u.sendInterval);
-        });
-        console.log(`Summary:`);
-        console.log(`Total Active Users: ${activeUsers.length}`);
-        console.log(`Total Messages Sent: ${messagesSent}`);
-        console.log(`Total Errors: ${errors}`);
-        process.exit(0);
-    }, DURATION_MS);
+    console.log(`Summary:`);
+    console.log(`Total Users: ${activeUsers.length}`);
+    console.log(`Total Messages Sent: ${messagesSent}`);
+    console.log(`Total Refreshes Simulated: ${refreshCount}`);
+    console.log(`Total Errors: ${errors}`);
+    process.exit(0);
 }
 
 run();
