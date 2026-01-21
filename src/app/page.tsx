@@ -12,7 +12,24 @@ export default function HomePage() {
   const [activeRooms, setActiveRooms] = useState<any[]>([]);
   const router = useRouter();
 
-  // Room list polling removed for privacy
+  useEffect(() => {
+    const fetchRooms = async () => {
+      try {
+        const res = await fetch('/api/rooms');
+        const data = await res.json();
+        if (data.success) {
+          setActiveRooms(data.rooms);
+        }
+      } catch (err) {
+        // Silently fail on network/polling errors to avoid console spam
+      }
+    };
+
+    fetchRooms(); // Initial fetch
+    const interval = setInterval(fetchRooms, 3000); // Poll every 3 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleJoinRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +66,28 @@ export default function HomePage() {
               Go to Room
             </Button>
 
-            {/* Active Rooms list removed for privacy */}
+            <div className="w-full border-t pt-4">
+              <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Active Rooms</h3>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {activeRooms.length > 0 ? (
+                  activeRooms.map((room) => (
+                    <button
+                      key={room.id}
+                      type="button"
+                      onClick={() => router.push(`/${room.id}`)}
+                      className="w-full flex items-center justify-between p-2 rounded-md hover:bg-muted text-sm transition-colors text-left group"
+                    >
+                      <span className="font-medium group-hover:text-primary transition-colors">{room.id}</span>
+                      <span className="text-xs text-muted-foreground bg-muted-foreground/10 px-2 py-0.5 rounded-full">
+                        {room.userCount} users
+                      </span>
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-2">No active rooms found.</p>
+                )}
+              </div>
+            </div>
           </CardFooter>
         </form>
       </Card>

@@ -72,32 +72,13 @@ if (fs.existsSync(DATA_FILE)) {
 
 export const rooms: Record<string, Room> = loadedRooms;
 
-let saveTimeout: NodeJS.Timeout | null = null;
-
+// Persistence: Save immediately (Sync) to avoid Next.js serverless timeout issues
 export const saveRooms = () => {
-  if (saveTimeout) return;
-
-  saveTimeout = setTimeout(() => {
-    // Serialization happens synchronously to capture state
-    const data = JSON.stringify(rooms);
-    // Use unique temp file to avoid race conditions with parallel writes
-    const tempFile = `${DATA_FILE}.${crypto.randomUUID()}.tmp`;
-
-    fs.writeFile(tempFile, data, (err) => {
-      saveTimeout = null;
-      if (err) {
-        console.error("Failed to write temp room data:", err);
-        return;
-      }
-      fs.rename(tempFile, DATA_FILE, (renameErr) => {
-        if (renameErr) {
-          console.error("Failed to rename room data file:", renameErr);
-          // Clean up temp file if rename failed
-          fs.unlink(tempFile, () => { });
-        }
-      });
-    });
-  }, 500);
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(rooms, null, 2));
+  } catch (e) {
+    console.error("Failed to save rooms:", e);
+  }
 };
 
 // Helper: Add message with pruning to prevent memory bloating
