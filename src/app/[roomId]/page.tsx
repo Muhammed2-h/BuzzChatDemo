@@ -257,12 +257,21 @@ export default function RoomPage() {
           replyTo: replyContext,
           isAnnouncement: announcementMode,
         }),
+      }).then(res => {
+        if (!res.ok) {
+          // API returned an error status
+          toast({
+            variant: "destructive",
+            title: "Failed to send",
+            description: "Your message could not be sent. Please try again.",
+          });
+        }
       }).catch(err => {
         console.error('Failed to send message:', err);
         toast({
           variant: "destructive",
-          title: "Failed to send",
-          description: "Your message could not be sent. Please try again.",
+          title: "Network error",
+          description: "Could not reach the server. Check your connection.",
         });
       });
     }
