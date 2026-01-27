@@ -165,25 +165,26 @@ export default function RoomPage() {
     }
 
     try {
-      // Check for stored session token
-      const storageKey = `buzzchat_token_${roomId}_${username}`;
-      const storedToken = localStorage.getItem(storageKey);
+      // Check for stored session token with the correct UNIQUE key
+      const storageKey = `buzzchat_creds_${roomId}_${username}`;
+      const savedData = localStorage.getItem(storageKey);
+      const storedToken = savedData ? JSON.parse(savedData).token : undefined;
 
       const res = await fetch('/api/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId, passkey, username, sessionToken: storedToken || undefined, adminCode }),
+        body: JSON.stringify({ roomId, passkey, username, sessionToken: storedToken, adminCode }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setIsAuthenticated(true);
+        // Senior Logic: Set the token FIRST, then set Authenticated to prevent race condition
         const tokenToSave = data.sessionToken || storedToken || sessionToken;
-
         if (tokenToSave) {
           setSessionToken(tokenToSave);
         }
+        setIsAuthenticated(true);
 
         // Save credentials with UNIQUE key per user to prevent collisions
         localStorage.setItem(`buzzchat_creds_${roomId}_${username}`, JSON.stringify({
@@ -439,7 +440,7 @@ export default function RoomPage() {
   };
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !sessionToken) return;
 
     let isActive = true;
     let timeoutId: NodeJS.Timeout;
