@@ -75,9 +75,11 @@ export const rooms: Record<string, Room> = loadedRooms;
 // Persistence: Save immediately (Sync) to avoid Next.js serverless timeout issues
 export const saveRooms = () => {
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(rooms)); // No pretty print for speed
+    const data = JSON.stringify(rooms);
+    console.log(`[Persistence] Saving ${Object.keys(rooms).length} rooms to ${DATA_FILE}`);
+    fs.writeFileSync(DATA_FILE, data);
   } catch (e) {
-    console.error("Failed to save rooms:", e);
+    console.error("[Persistence] Failed to save rooms:", e);
   }
 };
 

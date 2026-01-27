@@ -454,7 +454,8 @@ export default function RoomPage() {
     const pollMessages = async () => {
       try {
         const isTyping = currentMessage.length > 0;
-        const res = await fetch(`/api/poll?roomId=${roomId}&passkey=${passkey}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}&isTyping=${isTyping}`);
+        if (!roomId) return;
+        const res = await fetch(`/api/poll?roomId=${encodeURIComponent(roomId as string)}&passkey=${encodeURIComponent(passkey)}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}&isTyping=${isTyping}`);
 
         if (!isActive) return;
 
