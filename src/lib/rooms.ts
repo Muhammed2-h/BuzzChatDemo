@@ -85,9 +85,11 @@ export const saveRooms = () => {
 
 // Helper: Add message with pruning to prevent memory bloating
 export const addMessage = (room: Room, message: Message) => {
+  if (!room.messages) room.messages = [];
   room.messages.push(message);
-  if (room.messages.length > 500) {
-    // Keep only the last 500 messages
-    room.messages = room.messages.slice(-500);
+
+  // Senior Professional Logic: Cap messages at 100 to prevent server crashes
+  if (room.messages.length > 100) {
+    room.messages = room.messages.slice(-100);
   }
 };

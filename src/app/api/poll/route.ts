@@ -48,9 +48,11 @@ export async function GET(request: Request) {
 
     const currentUser = room.users[userIndex];
 
-    // Security: Verify token during polling too
+    // Security: STRICT Token Verification
+    // A senior engineer never leaves verification as "optional". 
+    // If a token exists for this user, it MUST match the request.
     if (currentUser.sessionToken && currentUser.sessionToken !== sessionToken) {
-      // Optional: We could be strict here, but for development let's just update lastSeen if passkey matched room
+      return NextResponse.json({ success: false, error: 'Session conflict. Please re-login.' }, { status: 401 });
     }
 
     currentUser.lastSeen = now;
@@ -119,7 +121,7 @@ export async function GET(request: Request) {
       pinnedBy: room.pinnedBy,
       creator: room.creator,
       admins: room.users.filter(u => u.isAdmin || u.username === room.creator).map(u => u.username),
-      adminCode: isCurrentUserAdmin ? room.adminCode : undefined,
+      isAdmin: isCurrentUserAdmin, // Return status, NOT the secret code
       stats: stats
     });
   } catch (error) {
