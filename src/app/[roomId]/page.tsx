@@ -109,12 +109,10 @@ export default function RoomPage() {
     const savedCreds = localStorage.getItem(`buzzchat_creds_${roomId}`);
     if (savedCreds) {
       try {
-        const { username: savedUser, passkey: savedPass, token: savedToken, adminCode: savedAdminCode } = JSON.parse(savedCreds);
-        if (savedUser && (savedPass || savedToken)) {
-          setUsername(savedUser);
-          if (savedPass) setPasskey(savedPass);
-          setSessionToken(savedToken || '');
-          if (savedAdminCode) setAdminCode(savedAdminCode);
+        const { username: savedUser, token: savedToken } = JSON.parse(savedCreds);
+        if (savedUser && savedToken) {
+          // Note: We no longer auto-fill the state variables here. 
+          // We try to log in silently in the background first.
 
           // Auto-trigger join
           fetch('/api/join', {
@@ -122,34 +120,26 @@ export default function RoomPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               roomId,
-              passkey: savedPass || '', // Might be empty now
               username: savedUser,
-              sessionToken: savedToken || undefined,
-              adminCode: savedAdminCode
+              sessionToken: savedToken
             }),
           })
             .then(res => res.json())
             .then(data => {
               if (data.success) {
+                // ONLY login if the token is valid
+                setUsername(savedUser);
                 setIsAuthenticated(true);
                 if (data.sessionToken) {
                   setSessionToken(data.sessionToken);
-                  // Update storage with fresh token if needed
                   localStorage.setItem(`buzzchat_creds_${roomId}`, JSON.stringify({
                     username: savedUser,
-                    passkey: savedPass,
-                    token: data.sessionToken,
-                    adminCode: savedAdminCode
+                    token: data.sessionToken
                   }));
                 }
               } else {
-                // If auto-login fails (e.g. wrong passkey now or room deleted), clear stale storage
+                // If token is invalid or room is new, clear storage so we get a clean form
                 localStorage.removeItem(`buzzchat_creds_${roomId}`);
-                // Reset local states to clear the form for the user
-                setUsername('');
-                setPasskey('');
-                setSessionToken('');
-                setAdminCode('');
               }
             })
             .catch(e => console.error("Auto-login error", e));
@@ -190,11 +180,10 @@ export default function RoomPage() {
           setSessionToken(tokenToSave);
         }
 
-        // Save credentials for auto-login (NOTE: We no longer save the passkey for security)
+        // Save credentials for auto-login (NOTE: We no longer save the passkey or adminCode for security)
         localStorage.setItem(`buzzchat_creds_${roomId}`, JSON.stringify({
           username,
-          token: tokenToSave,
-          adminCode: adminCode || undefined
+          token: tokenToSave
         }));
       } else {
         setError(data.error || 'Failed to join room.');
@@ -588,6 +577,7 @@ export default function RoomPage() {
                     className="w-32 h-6 text-xs px-2"
                     placeholder="Admin Code"
                     type="password"
+                    autoComplete="new-password"
                     value={adminCode}
                     onChange={(e) => setAdminCode(e.target.value)}
                   />
@@ -595,6 +585,7 @@ export default function RoomPage() {
                 <Input
                   id="username"
                   placeholder="Your name"
+                  autoComplete="off"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -605,6 +596,7 @@ export default function RoomPage() {
                 <Input
                   id="passkey"
                   type="password"
+                  autoComplete="new-password"
                   placeholder="Room's secret passkey"
                   value={passkey}
                   onChange={(e) => setPasskey(e.target.value)}
