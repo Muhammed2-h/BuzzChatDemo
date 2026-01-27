@@ -106,7 +106,12 @@ export default function RoomPage() {
   // Auto-login on mount
   useEffect(() => {
     // Attempt to recover session from localStorage
-    const savedCreds = localStorage.getItem(`buzzchat_creds_${roomId}`);
+    // Attempt to recover session from localStorage (using roomId ONLY for legacy, then looking for username-specific)
+    // Actually, we need to know the username to find the specific token.
+    // For auto-rejoin on mount, we'll try to find any creds for this room.
+    const allKeys = Object.keys(localStorage);
+    const roomKey = allKeys.find(k => k.startsWith(`buzzchat_creds_${roomId}`));
+    const savedCreds = roomKey ? localStorage.getItem(roomKey) : null;
     if (savedCreds) {
       try {
         const { username: savedUser, token: savedToken } = JSON.parse(savedCreds);
@@ -132,14 +137,14 @@ export default function RoomPage() {
                 setIsAuthenticated(true);
                 if (data.sessionToken) {
                   setSessionToken(data.sessionToken);
-                  localStorage.setItem(`buzzchat_creds_${roomId}`, JSON.stringify({
+                  localStorage.setItem(`buzzchat_creds_${roomId}_${savedUser}`, JSON.stringify({
                     username: savedUser,
                     token: data.sessionToken
                   }));
                 }
               } else {
                 // If token is invalid or room is new, clear storage so we get a clean form
-                localStorage.removeItem(`buzzchat_creds_${roomId}`);
+                if (roomKey) localStorage.removeItem(roomKey);
               }
             })
             .catch(e => console.error("Auto-login error", e));
@@ -180,8 +185,8 @@ export default function RoomPage() {
           setSessionToken(tokenToSave);
         }
 
-        // Save credentials for auto-login (NOTE: We no longer save the passkey or adminCode for security)
-        localStorage.setItem(`buzzchat_creds_${roomId}`, JSON.stringify({
+        // Save credentials with UNIQUE key per user to prevent collisions
+        localStorage.setItem(`buzzchat_creds_${roomId}_${username}`, JSON.stringify({
           username,
           token: tokenToSave
         }));
@@ -450,7 +455,7 @@ export default function RoomPage() {
         if (!res.ok) {
           if (res.status === 410) {
             alert('Room has been deleted by the owner.');
-            localStorage.removeItem(`buzzchat_creds_${roomId}`);
+            localStorage.removeItem(`buzzchat_creds_${roomId}_${username}`);
             router.push('/');
             return;
           }
@@ -545,7 +550,7 @@ export default function RoomPage() {
       isActive = false;
       clearTimeout(timeoutId);
     };
-  }, [isAuthenticated, roomId, passkey, username, currentMessage]);
+  }, [isAuthenticated, roomId, passkey, username, currentMessage, sessionToken]);
 
   if (!isAuthenticated) {
     return (
