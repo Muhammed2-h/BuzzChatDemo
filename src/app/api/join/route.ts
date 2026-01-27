@@ -47,13 +47,15 @@ export async function POST(request: Request) {
     }
 
     const room = rooms[sanitizedRoomId];
-    if (!room.creator) {
-      room.creator = username;
-    }
 
-    // Room exists, validate the provided passkey.
-    if (room.passkey !== passkey) {
-      return NextResponse.json({ success: false, error: 'Invalid passkey.' }, { status: 403 });
+    // Security: Check if this is a returning user with a valid session token
+    const isReturningWithToken = sessionToken && room.users.some(u => u.username === username && u.sessionToken === sessionToken);
+
+    // If not a returning session, or if a passkey IS provided, we must validate the passkey.
+    if (!isReturningWithToken || (passkey && passkey !== room.passkey)) {
+      if (room.passkey !== passkey) {
+        return NextResponse.json({ success: false, error: 'Invalid passkey.' }, { status: 403 });
+      }
     }
 
     if (room.bannedUsers && room.bannedUsers.includes(username)) {

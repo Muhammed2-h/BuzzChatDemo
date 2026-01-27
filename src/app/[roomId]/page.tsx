@@ -110,9 +110,9 @@ export default function RoomPage() {
     if (savedCreds) {
       try {
         const { username: savedUser, passkey: savedPass, token: savedToken, adminCode: savedAdminCode } = JSON.parse(savedCreds);
-        if (savedUser && savedPass) {
+        if (savedUser && (savedPass || savedToken)) {
           setUsername(savedUser);
-          setPasskey(savedPass);
+          if (savedPass) setPasskey(savedPass);
           setSessionToken(savedToken || '');
           if (savedAdminCode) setAdminCode(savedAdminCode);
 
@@ -122,7 +122,7 @@ export default function RoomPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               roomId,
-              passkey: savedPass,
+              passkey: savedPass || '', // Might be empty now
               username: savedUser,
               sessionToken: savedToken || undefined,
               adminCode: savedAdminCode
@@ -190,10 +190,9 @@ export default function RoomPage() {
           setSessionToken(tokenToSave);
         }
 
-        // Save credentials for auto-login
+        // Save credentials for auto-login (NOTE: We no longer save the passkey for security)
         localStorage.setItem(`buzzchat_creds_${roomId}`, JSON.stringify({
           username,
-          passkey,
           token: tokenToSave,
           adminCode: adminCode || undefined
         }));
