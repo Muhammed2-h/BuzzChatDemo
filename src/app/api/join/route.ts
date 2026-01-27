@@ -90,18 +90,22 @@ export async function POST(request: Request) {
 
     if (existingUserIndex !== -1) {
       const existingUser = room.users[existingUserIndex];
-      const isPresent = (now - existingUser.lastSeen) < HEARTBEAT_TIMEOUT;
 
-      // Security Check: Only block if the user is CURRENTLY active in another tab/device.
-      // If they are gone for >30s, we assume they are returning and let them in with the passkey.
-      if (isPresent && existingUser.sessionToken && existingUser.sessionToken !== sessionToken) {
-        if (!isAdminOverride) {
-          return NextResponse.json({ success: false, error: 'Username is taken and currently active. To rejoin, wait 30s or use your original session.' }, { status: 403 });
+      // Security Check: 
+      // If the user provides the correct PASSKEY, they are the owner of the identity (in this simple app).
+      // We allow them to overwrite the old session.
+      // We ONLY block if they are trying to "sneak in" with a session token that is wrong AND no passkey.
+
+      if (existingUser.sessionToken && existingUser.sessionToken !== sessionToken) {
+        if (!passkey && !isAdminOverride) {
+          // Trying to use a token to auto-login, but it's wrong.
+          return NextResponse.json({ success: false, error: 'Session expired. Please re-enter passkey.' }, { status: 403 });
         }
+        // If they provided the passkey (which we validated above), we ALLOW them to take over.
       }
 
       // If we are here, we are allowed to take over the session.
-      let token = (isAdminOverride ? crypto.randomUUID() : (sessionToken || existingUser.sessionToken || crypto.randomUUID()));
+      let token = (isAdminOverride ? crypto.randomUUID() : (sessionToken || crypto.randomUUID()));
       existingUser.sessionToken = token;
       existingUser.lastSeen = now;
 

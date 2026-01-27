@@ -465,6 +465,12 @@ export default function RoomPage() {
             // Stop if we are intentionally deleting the room
             if (isDeleting.current) return;
 
+            // Senior Logic: If we get a session conflict, our token is toast.
+            // Wipe it immediately so the user can re-login cleanly.
+            if (res.status === 401) {
+              localStorage.removeItem(`buzzchat_creds_${roomId}_${username}`);
+            }
+
             // 403: Room missing (restart)
             // 401: User missing (restart/persistence lag)
             // Attempt to auto-rejoin in both cases.
