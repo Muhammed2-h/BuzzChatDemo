@@ -54,32 +54,13 @@ export async function POST(request: Request) {
             if (!isAdmin) {
                 return NextResponse.json({ success: false, error: 'Only admins can delete the room.' }, { status: 403 });
             }
-            // Scheduled delete: Notify users, lock entry, actual delete in 60s
-            room.deletionScheduledAt = Date.now() + 60000;
-            room.users = []; // KICK EVERYONE IMMEDIATELY
-            // Note: We can't really "notify" them via addMessage if we kick them,
-            // because api/poll checks strictly for user presence now.
-            // BUT api/poll returns 401 if user not found. Frontend handles 401.
-            // So they get "User not active" or similar.
-            // If we want a nicer "Room Deleted" message, we should probably Keep them ??
-            // User said: "users also gets removed ... room stays ... for 60s".
-            // If I remove them, they can't see the "Closing in 60s" message.
-            // But they get "Exits".
-            // I'll stick to removing them.
 
+            // Immediate Deletion:
+            delete rooms[sanitizeId(roomId)];
             saveRooms();
+            console.log(`Room ${roomId} deleted immediately by admin.`);
 
-            // Hard delete after 60 seconds
-            setTimeout(() => {
-                const id = sanitizeId(roomId);
-                if (rooms[id]) {
-                    delete rooms[id];
-                    saveRooms();
-                    console.log(`Room ${id} deleted per schedule.`);
-                }
-            }, 60000);
-
-            return NextResponse.json({ success: true, message: 'Room deletion scheduled in 1 minute.' });
+            return NextResponse.json({ success: true, message: 'Room deleted.' });
         }
 
         saveRooms();
