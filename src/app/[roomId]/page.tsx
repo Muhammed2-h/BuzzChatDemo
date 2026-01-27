@@ -443,7 +443,7 @@ export default function RoomPage() {
       try {
         const isTyping = currentMessage.length > 0;
         if (!roomId) return;
-        const res = await fetch(`/api/poll?roomId=${encodeURIComponent(roomId as string)}&passkey=${encodeURIComponent(passkey)}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}&isTyping=${isTyping}`);
+        const res = await fetch(`/api/poll?roomId=${encodeURIComponent(roomId as string)}&passkey=${encodeURIComponent(passkey)}&since=${lastMessageTimestamp.current}&username=${encodeURIComponent(username)}&isTyping=${isTyping}&sessionToken=${encodeURIComponent(sessionToken)}`);
 
         if (!isActive) return;
 

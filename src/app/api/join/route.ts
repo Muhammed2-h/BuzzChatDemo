@@ -86,22 +86,22 @@ export async function POST(request: Request) {
 
     // Check for Admin Override
     const isAdminOverride = !!(room.adminCode && adminCode === room.adminCode);
+    const HEARTBEAT_TIMEOUT = 30 * 1000; // 30 seconds to be considered "Present"
 
     if (existingUserIndex !== -1) {
-      // User Reclaiming Session:
       const existingUser = room.users[existingUserIndex];
+      const isPresent = (now - existingUser.lastSeen) < HEARTBEAT_TIMEOUT;
 
-      // Security Check: Prevent Session Hijacking
-      // If the active user has a session token, the request MUST provide the matching token.
-      if (existingUser.sessionToken && existingUser.sessionToken !== sessionToken) {
+      // Security Check: Only block if the user is CURRENTLY active in another tab/device.
+      // If they are gone for >30s, we assume they are returning and let them in with the passkey.
+      if (isPresent && existingUser.sessionToken && existingUser.sessionToken !== sessionToken) {
         if (!isAdminOverride) {
-          return NextResponse.json({ success: false, error: 'Username is taken. To rejoin as this user, you need your original session.' }, { status: 403 });
+          return NextResponse.json({ success: false, error: 'Username is taken and currently active. To rejoin, wait 30s or use your original session.' }, { status: 403 });
         }
       }
 
-      // If matching (or legacy user has no token), update session.
-      // If Admin Override, we ensure we generate a FRESH token to take control.
-      let token = (isAdminOverride ? crypto.randomUUID() : (existingUser.sessionToken || crypto.randomUUID()));
+      // If we are here, we are allowed to take over the session.
+      let token = (isAdminOverride ? crypto.randomUUID() : (sessionToken || existingUser.sessionToken || crypto.randomUUID()));
       existingUser.sessionToken = token;
       existingUser.lastSeen = now;
 
