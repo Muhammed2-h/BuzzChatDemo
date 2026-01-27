@@ -143,8 +143,13 @@ export default function RoomPage() {
                   }));
                 }
               } else {
-                // If auto-login fails (e.g. wrong passkey now), clear storage
-                // localStorage.removeItem(`buzzchat_creds_${roomId}`); // Optional: decide if we want to clear or let user retry
+                // If auto-login fails (e.g. wrong passkey now or room deleted), clear stale storage
+                localStorage.removeItem(`buzzchat_creds_${roomId}`);
+                // Reset local states to clear the form for the user
+                setUsername('');
+                setPasskey('');
+                setSessionToken('');
+                setAdminCode('');
               }
             })
             .catch(e => console.error("Auto-login error", e));
@@ -456,6 +461,7 @@ export default function RoomPage() {
         if (!res.ok) {
           if (res.status === 410) {
             alert('Room has been deleted by the owner.');
+            localStorage.removeItem(`buzzchat_creds_${roomId}`);
             router.push('/');
             return;
           }
